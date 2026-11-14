@@ -1,5 +1,15 @@
 # Tivolli Scraper + API + Splunk HEC
 
+[![CI](https://github.com/EttoreCSenatore/tivolli-sports/actions/workflows/ci.yml/badge.svg)](https://github.com/EttoreCSenatore/tivolli-sports/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/EttoreCSenatore/tivolli-sports/actions/workflows/codeql.yml/badge.svg)](https://github.com/EttoreCSenatore/tivolli-sports/actions/workflows/codeql.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+📖 **Documentation (English · Português):** https://ettorecsenatore.github.io/tivolli-sports/
+
+![Chat search with product cards](website/static/img/screenshots/chat-results.png)
+
+> Screenshots use generic demo data (`python -m app.seed`), not the store's real catalog.
+
 Production-ready web scraper and REST API for the Brazilian e-commerce site **tivolli.com.br**, with near-real-time catalog freshness and Splunk HEC event forwarding.
 
 > **Responsible-Use Disclaimer**: This software scrapes publicly available catalog data from tivolli.com.br. The operator **must verify they have legal permission** to scrape this site before running it. Respect `robots.txt`, rate limits, and the site's terms of service. Do not collect personal/customer data. The disallowed paths `/tivadm43` and `/homologacao` are never accessed.
@@ -234,3 +244,11 @@ tivolli-scraper/
 │   └── package.json
 └── ...
 ```
+
+
+## Documentation, security and contributing
+
+- Full docs (architecture, API, chat search, configuration, deployment, security): https://ettorecsenatore.github.io/tivolli-sports/
+- Found a vulnerability? See [SECURITY.md](SECURITY.md) (private advisory form).
+- Quality gates: `ruff check .`, `python -m pytest tests -q`, `cd frontend && npx tsc --noEmit && npm run build`.
+- Licensed under the [MIT License](LICENSE).

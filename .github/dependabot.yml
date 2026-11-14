@@ -4,15 +4,42 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    groups:
+      python-minor-patch:
+        update-types: [minor, patch]
   - package-ecosystem: npm
     directory: /frontend
     schedule:
       interval: weekly
+    groups:
+      frontend-minor-patch:
+        update-types: [minor, patch]
+    ignore:
+      # Major upgrades (React, Tailwind, TypeScript) need hands-on migration work.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+  - package-ecosystem: npm
+    directory: /website
+    schedule:
+      interval: weekly
+    groups:
+      docs-minor-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
   - package-ecosystem: docker
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # Stay on a released, supported Python line; bump deliberately.
+      - dependency-name: python
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
