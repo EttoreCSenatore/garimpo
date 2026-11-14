@@ -36,7 +36,7 @@ curl "http://127.0.0.1:8000/products?brand=Nike&max_price=500&available=true&lim
 }
 ```
 
-`q` matches product names literally (`%` and `_` are escaped). Responses carry `Cache-Control: public, max-age=60`.
+`q` is a full-text search (SQLite FTS5) over name, brand, category breadcrumbs and slug: accents and case are ignored, words can come in any order, and each word also matches as a prefix (`bol` finds *bola* and *bolas*). Every word must match. On databases without FTS5 it falls back to a literal name match. Responses carry `Cache-Control: public, max-age=60`.
 
 ## Admin endpoints
 

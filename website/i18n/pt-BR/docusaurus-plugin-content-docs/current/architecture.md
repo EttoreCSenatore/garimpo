@@ -28,6 +28,7 @@ flowchart LR
 | `app/config.py` | Configurações tipadas via ambiente / `.env`; falha cedo em configuração insegura de produção. |
 | `app/api/routes.py` | API REST pública, endpoints de admin, proxy de imagens e endpoint de chat. |
 | `app/search/intent_parser.py` | Compreensão de linguagem natural baseada em regras (PT-BR + EN). |
+| `app/search/fts.py` | Índice SQLite FTS5 (`products_fts`, sincronizado por triggers) e busca ordenada por BM25. |
 | `app/scraper/*` | Cliente HTTP com limite de taxa, descoberta de categorias, rastreador de listagens e parser de produto. |
 | `app/tasks.py` | Tarefas de atualização completa, incremental e por produto; persistência e histórico. |
 | `app/splunk_hec.py` | Cliente Splunk HEC em lotes com buffer de contingência em disco. |

@@ -36,7 +36,7 @@ curl "http://127.0.0.1:8000/products?brand=Nike&max_price=500&available=true&lim
 }
 ```
 
-`q` compara nomes de produto de forma literal (`%` e `_` são escapados). As respostas trazem `Cache-Control: public, max-age=60`.
+`q` é uma busca de texto completo (SQLite FTS5) em nome, marca, breadcrumbs da categoria e slug: acentos e maiúsculas são ignorados, as palavras podem vir em qualquer ordem e cada palavra também vale como prefixo (`bol` encontra *bola* e *bolas*). Todas as palavras precisam corresponder. Em bancos sem FTS5, volta a comparar o nome de forma literal. As respostas trazem `Cache-Control: public, max-age=60`.
 
 ## Endpoints de administração
 
