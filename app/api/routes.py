@@ -9,7 +9,6 @@ from urllib.parse import urljoin
 from uuid import uuid4
 
 import httpx
-from cachetools import TTLCache
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import update
@@ -40,7 +39,6 @@ class ChatResponse(BaseModel):
     filters_applied: dict
     products: list[dict]
 
-hot_product_cache: TTLCache = TTLCache(maxsize=settings.hot_product_cache_size, ttl=60)
 
 # Estado das sessões de chat para o fluxo de compra guiado (em memória, por
 # session_id). Guarda preferências pessoais (gênero, número do calçado) que
@@ -205,7 +203,6 @@ async def get_product(
         spawn(refresh_single_product_async(product_id))
 
     data = product.model_dump()
-    hot_product_cache[product_id] = data
     response.headers.update(_cache_headers())
     return _apply_disclaimer(data)
 
@@ -325,8 +322,8 @@ async def refresh_single_product(
 async def get_queue_status(_: str = Depends(require_admin)):
     return {
         "active_workers": active_workers,
-        "cache_size": len(hot_product_cache),
-        "cache_max": settings.hot_product_cache_size,
+        "inflight_single_refreshes": len(inflight_single),
+        "chat_sessions": len(chat_sessions),
     }
 
 

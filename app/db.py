@@ -17,6 +17,8 @@ def init_db() -> None:
 
     SQLModel.metadata.create_all(engine)
     _enable_wal()
+    _ensure_indexes()
+    _close_stale_runs()
 
 
 def _enable_wal() -> None:
@@ -37,3 +39,30 @@ def get_session() -> Iterator[Session]:
 def session_scope() -> Iterator[Session]:
     with Session(engine, expire_on_commit=False) as session:
         yield session
+
+
+# create_all() does not add indexes to tables that already exist, so they are created idempotently.
+_INDEXES = (
+    "CREATE INDEX IF NOT EXISTS ix_products_category_id ON products (category_id)",
+    "CREATE INDEX IF NOT EXISTS ix_products_brand ON products (brand)",
+    "CREATE INDEX IF NOT EXISTS ix_products_status ON products (status)",
+    "CREATE INDEX IF NOT EXISTS ix_products_view_count ON products (view_count)",
+    "CREATE INDEX IF NOT EXISTS ix_product_history_scraped_at ON product_history (product_id, scraped_at)",
+    "CREATE INDEX IF NOT EXISTS ix_scrape_runs_started_at ON scrape_runs (started_at)",
+)
+
+
+def _ensure_indexes() -> None:
+    with engine.begin() as conn:
+        for statement in _INDEXES:
+            conn.exec_driver_sql(statement)
+
+
+def _close_stale_runs() -> None:
+    """Runs still marked "running" at startup were interrupted by a crash or restart."""
+    with engine.begin() as conn:
+        conn.exec_driver_sql(
+            "UPDATE scrape_runs SET status = 'failed', "
+            "error_message = 'interrupted (process restarted)', completed_at = CURRENT_TIMESTAMP "
+            "WHERE status = 'running'"
+        )
