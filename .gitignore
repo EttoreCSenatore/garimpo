@@ -1,0 +1,53 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+env.bak/
+venv.bak/
+*.egg-info/
+.eggs/
+build/
+dist/
+*.egg
+.env
+*.db
+*.sqlite3
+*.sqlite
+events.jsonl
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Node / frontend
+node_modules/
+frontend/dist/
+*.tsbuildinfo
+
+# SQLite sidecar files and local data
+*.db-wal
+*.db-shm
+*.db-journal
+data/
+
+# Env variants (keep .env.example)
+.env.*
+!.env.example
+
+# Local tooling / AI assistant artifacts
+.qoder/
+.claude/
+Instructions/
+
+# Logs
+*.log

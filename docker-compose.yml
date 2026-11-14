@@ -1,0 +1,25 @@
+services:
+  app:
+    build: .
+    container_name: tivolli-scraper
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=production
+      - DATABASE_URL=sqlite:////app/data/tivolli.db
+      - ADMIN_TOKEN=${ADMIN_TOKEN:-change-me-to-a-secure-token}
+      - SPLUNK_HEC_URL=${SPLUNK_HEC_URL:-https://host.docker.internal:8088/services/collector/event}
+      - SPLUNK_HEC_TOKEN=${SPLUNK_HEC_TOKEN:-}
+      - DISCLAIMER=${DISCLAIMER:-false}
+    volumes:
+      - tivolli_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  tivolli_data:

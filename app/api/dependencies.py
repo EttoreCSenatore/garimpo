@@ -1,0 +1,28 @@
+from __future__ import annotations
+
+from typing import Generator
+
+from fastapi import Depends, Header, HTTPException, status
+from sqlmodel import Session
+
+from app.config import settings
+from app.db import engine
+from app.splunk_hec import SplunkHECLogger, get_hec_logger
+
+
+def get_db() -> Generator[Session, None, None]:
+    with Session(engine) as session:
+        yield session
+
+
+def get_splunk() -> SplunkHECLogger:
+    return get_hec_logger()
+
+
+def require_admin(x_admin_token: str = Header(...)) -> str:
+    if x_admin_token != settings.admin_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid admin token",
+        )
+    return x_admin_token
