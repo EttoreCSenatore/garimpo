@@ -22,9 +22,9 @@ function Welcome({ onSuggest }: { onSuggest: (s: string) => void }) {
     <div className="flex flex-col items-center justify-center flex-1 gap-6 px-4 pb-8">
       <div className="flex flex-col items-center gap-2 text-center">
         <div className="w-16 h-16 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg">
-          <span className="text-white text-2xl font-bold">T</span>
+          <span className="text-white text-2xl font-bold">G</span>
         </div>
-        <h2 className="text-xl font-semibold text-slate-800">Tivolli Busca Inteligente</h2>
+        <h2 className="text-xl font-semibold text-slate-800">Garimpo · Busca Inteligente</h2>
         <p className="text-sm text-slate-500 max-w-sm">
           Pergunte o que quiser sobre nossos produtos esportivos. Informe gênero e
           número do calçado que eu encontro o produto ideal para você!
@@ -142,10 +142,10 @@ export default function ChatPage() {
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
-              <span className="text-white text-sm font-bold">T</span>
+              <span className="text-white text-sm font-bold">G</span>
             </div>
             <div>
-              <h1 className="text-sm font-semibold text-slate-900">Tivolli Busca Inteligente</h1>
+              <h1 className="text-sm font-semibold text-slate-900">Garimpo · Busca Inteligente</h1>
               {lastUpdated && (
                 <p className="text-[10px] text-slate-400">Catálogo atualizado em {lastUpdated}</p>
               )}

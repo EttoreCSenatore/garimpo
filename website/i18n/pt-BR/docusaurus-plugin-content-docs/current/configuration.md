@@ -13,7 +13,7 @@ As configurações vêm de variáveis de ambiente ou de um arquivo `.env` (veja 
 | --- | --- | --- |
 | `APP_ENV` | `development` | `production` ativa validação estrita (veja `ADMIN_TOKEN`). |
 | `HOST` / `PORT` | `127.0.0.1` / `8000` | Endereço de escuta. Contêineres usam `HOST=0.0.0.0`. |
-| `DATABASE_URL` | `sqlite:///./tivolli.db` | Qualquer URL do SQLAlchemy. |
+| `DATABASE_URL` | `sqlite:///./garimpo.db` | Qualquer URL do SQLAlchemy. |
 | `SCHEDULER_ENABLED` | `true` | Use `false` para desativar a coleta em segundo plano. |
 | `DISCLAIMER` | `false` | Marca preços como indicativos e expõe `source_url`. |
 
@@ -31,7 +31,7 @@ As configurações vêm de variáveis de ambiente ou de um arquivo `.env` (veja 
 
 | Variável | Padrão | Descrição |
 | --- | --- | --- |
-| `USER_AGENT` | `TivolliBot/1.0 (+URL do repositório)` | Identifique seu bot e informe um meio de contato. |
+| `USER_AGENT` | `GarimpoBot/1.0 (+URL do repositório)` | Identifique seu bot e informe um meio de contato. |
 | `BASE_URL` | `https://www.tivolli.com.br` | Site a ser percorrido. |
 | `REQUESTS_PER_SECOND` | `1` | Orçamento de requisições global ao processo. |
 | `JITTER_MIN_MS` / `JITTER_MAX_MS` | `500` / `1500` | Atraso aleatório somado a cada requisição. |

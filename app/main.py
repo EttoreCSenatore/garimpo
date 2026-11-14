@@ -84,7 +84,7 @@ async def run_incremental_refresh_job() -> None:
 
 
 app = FastAPI(
-    title="Tivolli Scraper API",
+    title="Garimpo API",
     description="Scraper de produtos e API REST para tivolli.com.br com integração Splunk HEC",
     version="1.0.0",
     lifespan=lifespan,

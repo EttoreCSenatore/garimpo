@@ -47,12 +47,12 @@ class SplunkHECLogger:
         return self._client
 
     def _build_event(self, event: dict) -> dict:
-        event_type = event.get("event_type", "tivolli.event")
+        event_type = event.get("event_type", "garimpo.event")
         return {
             "time": event.get("_time", time.time()),
             "host": event.get("host", socket.gethostname()),
-            "source": "tivolli-scraper",
-            "sourcetype": "tivolli",
+            "source": "garimpo",
+            "sourcetype": "garimpo",
             "event": {
                 "event_type": event_type,
                 **event,

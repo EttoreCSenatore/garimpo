@@ -14,8 +14,8 @@ title: Getting started
 ## Run the API locally
 
 ```bash
-git clone https://github.com/EttoreCSenatore/tivolli-sports.git
-cd tivolli-sports
+git clone https://github.com/EttoreCSenatore/garimpo.git
+cd garimpo
 python -m venv .venv
 .venv/bin/pip install -r requirements.txt
 cp .env.example .env
@@ -53,7 +53,7 @@ npm run dev        # http://localhost:5173, proxies /api to :8000
 .venv/bin/python -m pytest tests -q
 ```
 
-Tests never touch the network or your local `tivolli.db`: `tests/conftest.py` uses a temporary database and disables the scheduler.
+Tests never touch the network or your local `garimpo.db`: `tests/conftest.py` uses a temporary database and disables the scheduler.
 
 ## Run with Docker
 

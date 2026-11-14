@@ -5,7 +5,7 @@ These variables must be set before ``app.config`` is first imported.
 import os
 import tempfile
 
-_tmp = tempfile.mkdtemp(prefix="tivolli-tests-")
+_tmp = tempfile.mkdtemp(prefix="garimpo-tests-")
 os.environ.setdefault("DATABASE_URL", f"sqlite:///{_tmp}/test.db")
 os.environ.setdefault("SPLUNK_BUFFER_FILE", f"{_tmp}/events.jsonl")
 os.environ["SCHEDULER_ENABLED"] = "false"

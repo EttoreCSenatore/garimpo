@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "tivolli-scraper"
+name = "garimpo"
 version = "1.0.0"
-description = "Tivolli product scraper + REST API + Splunk HEC integration"
+description = "Garimpo: catalog scraper, REST API and chat search for a Brazilian sports store, with Splunk HEC forwarding"
 requires-python = ">=3.12"
 dependencies = [
     "httpx[http2]>=0.27",
