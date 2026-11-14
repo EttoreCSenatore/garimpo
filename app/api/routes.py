@@ -116,7 +116,7 @@ async def health_check(db: Session = Depends(get_db)):
     ).first()
     return {
         "status": "ok",
-        "service": "tivolli-scraper",
+        "service": "garimpo",
         "version": "1.0.0",
         "last_refresh": last_run.completed_at.isoformat() if last_run and last_run.completed_at else None,
         "timestamp": datetime.now(UTC).isoformat(),
@@ -295,7 +295,7 @@ async def trigger_full_refresh(
     from app.tasks import run_full_refresh_async
 
     spawn(run_full_refresh_async())
-    await splunk.send({"event_type": "tivolli.run.manual_trigger", "run_type": "full"})
+    await splunk.send({"event_type": "garimpo.run.manual_trigger", "run_type": "full"})
     return {"status": "started", "message": "Atualização completa iniciada"}
 
 
@@ -311,7 +311,7 @@ async def refresh_single_product(
         inflight_single.add(product_id)
         spawn(refresh_single_product_async(product_id))
     await splunk.send(
-        {"event_type": "tivolli.run.manual_trigger", "run_type": "single", "product_id": product_id}
+        {"event_type": "garimpo.run.manual_trigger", "run_type": "single", "product_id": product_id}
     )
     return {"status": "started", "message": f"Atualização iniciada para o produto {product_id}"}
 

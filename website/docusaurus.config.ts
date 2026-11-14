@@ -3,7 +3,7 @@ import type {Config} from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
-  title: 'Tivolli Sports',
+  title: 'Garimpo',
   tagline: 'Catalog scraper, REST API and conversational search for a Brazilian sports store',
   favicon: 'img/favicon.svg',
 
@@ -12,9 +12,9 @@ const config: Config = {
   },
 
   url: 'https://ettorecsenatore.github.io',
-  baseUrl: '/tivolli-sports/',
+  baseUrl: '/garimpo/',
   organizationName: 'EttoreCSenatore',
-  projectName: 'tivolli-sports',
+  projectName: 'garimpo',
 
   onBrokenLinks: 'throw',
 
@@ -39,7 +39,7 @@ const config: Config = {
         docs: {
           routeBasePath: '/', // docs-only site
           sidebarPath: './sidebars.ts',
-          editUrl: 'https://github.com/EttoreCSenatore/tivolli-sports/tree/main/website/',
+          editUrl: 'https://github.com/EttoreCSenatore/garimpo/tree/main/website/',
         },
         blog: false,
         theme: {
@@ -54,9 +54,9 @@ const config: Config = {
       respectPrefersColorScheme: true,
     },
     navbar: {
-      title: 'Tivolli Sports',
+      title: 'Garimpo',
       logo: {
-        alt: 'Tivolli Sports',
+        alt: 'Garimpo',
         src: 'img/logo.svg',
       },
       items: [
@@ -71,7 +71,7 @@ const config: Config = {
           position: 'right',
         },
         {
-          href: 'https://github.com/EttoreCSenatore/tivolli-sports',
+          href: 'https://github.com/EttoreCSenatore/garimpo',
           label: 'GitHub',
           position: 'right',
         },
@@ -83,12 +83,12 @@ const config: Config = {
         {
           title: 'Project',
           items: [
-            {label: 'GitHub', href: 'https://github.com/EttoreCSenatore/tivolli-sports'},
-            {label: 'Security policy', href: 'https://github.com/EttoreCSenatore/tivolli-sports/blob/main/SECURITY.md'},
+            {label: 'GitHub', href: 'https://github.com/EttoreCSenatore/garimpo'},
+            {label: 'Security policy', href: 'https://github.com/EttoreCSenatore/garimpo/blob/main/SECURITY.md'},
           ],
         },
       ],
-      copyright: `Tivolli Sports · MIT License · ${new Date().getFullYear()}`,
+      copyright: `Garimpo · MIT License · ${new Date().getFullYear()}`,
     },
     prism: {
       theme: prismThemes.github,

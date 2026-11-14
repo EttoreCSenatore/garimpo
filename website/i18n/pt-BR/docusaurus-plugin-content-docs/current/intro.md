@@ -1,12 +1,13 @@
 ---
 slug: /
 sidebar_position: 1
-title: Tivolli Sports
+title: Garimpo
 ---
 
-# Tivolli Sports
+# Garimpo
 
-**Tivolli Sports** é um coletor de catálogo (scraper), uma API REST e uma busca conversacional para um e-commerce brasileiro de artigos esportivos (tivolli.com.br).
+**Garimpo** é um coletor de catálogo (scraper), uma API REST e uma busca conversacional para um e-commerce brasileiro de artigos esportivos, a Tivolli Sports (tivolli.com.br).
+O nome vem de *garimpar*: procurar com cuidado até achar um bom achado ou uma boa oferta.
 Ele mantém uma cópia local do catálogo, atualizada quase em tempo real, e permite buscar em português ou inglês:
 *"tênis feminino número 38"*, *"chuteiras nike até 500"*, *"camisa do flamengo"*.
 

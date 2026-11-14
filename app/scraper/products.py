@@ -235,7 +235,7 @@ async def fetch_and_parse_product(
         from app.splunk_hec import get_hec_logger
         await get_hec_logger().send(
             {
-                "event_type": "tivolli.error.parse",
+                "event_type": "garimpo.error.parse",
                 "url": url,
                 "error": str(exc),
             }

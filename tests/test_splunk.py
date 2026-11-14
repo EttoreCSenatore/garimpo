@@ -32,7 +32,7 @@ async def test_splunk_hec_batch(hec_logger):
         )
 
         for i in range(5):
-            await hec_logger.send({"event_type": "tivolli.product.scraped", "id": i, "name": f"Product {i}"})
+            await hec_logger.send({"event_type": "garimpo.product.scraped", "id": i, "name": f"Product {i}"})
 
         await hec_logger.flush()
 
@@ -44,8 +44,8 @@ async def test_splunk_hec_batch(hec_logger):
             events = [json.loads(line) for line in body.strip().split("\n") if line.strip()]
             assert len(events) <= 3
             for event in events:
-                assert event["sourcetype"] == "tivolli"
-                assert event["source"] == "tivolli-scraper"
+                assert event["sourcetype"] == "garimpo"
+                assert event["source"] == "garimpo"
                 assert "event_type" in event["event"]
 
 
@@ -56,7 +56,7 @@ async def test_splunk_hec_buffer_on_failure(hec_logger, tmp_path):
             return_value=httpx.Response(500)
         )
 
-        await hec_logger.send({"event_type": "tivolli.product.scraped", "id": 1, "name": "Test"})
+        await hec_logger.send({"event_type": "garimpo.product.scraped", "id": 1, "name": "Test"})
         await hec_logger.flush()
 
     buffer_path = Path(hec_logger.buffer_file)
@@ -64,14 +64,14 @@ async def test_splunk_hec_buffer_on_failure(hec_logger, tmp_path):
     lines = buffer_path.read_text().strip().split("\n")
     assert len(lines) >= 1
     event = json.loads(lines[0])
-    assert event["event"]["event_type"] == "tivolli.product.scraped"
+    assert event["event"]["event_type"] == "garimpo.product.scraped"
 
 
 @pytest.mark.asyncio
 async def test_splunk_hec_no_token(hec_logger, tmp_path):
     hec_logger.token = ""
     with respx.mock(assert_all_called=False):
-        await hec_logger.send({"event_type": "tivolli.product.scraped", "id": 1})
+        await hec_logger.send({"event_type": "garimpo.product.scraped", "id": 1})
         await hec_logger.flush()
 
     buffer_path = Path(hec_logger.buffer_file)
@@ -106,7 +106,7 @@ async def test_splunk_event_structure(hec_logger):
             return_value=httpx.Response(200, json={"text": "Success"})
         )
 
-        await hec_logger.send({"event_type": "tivolli.product.scraped", "id": 42, "name": "Test Product"})
+        await hec_logger.send({"event_type": "garimpo.product.scraped", "id": 42, "name": "Test Product"})
         await hec_logger.flush()
 
         call = mock.calls[0]
@@ -115,7 +115,7 @@ async def test_splunk_event_structure(hec_logger):
 
         assert "time" in event
         assert "host" in event
-        assert event["source"] == "tivolli-scraper"
-        assert event["sourcetype"] == "tivolli"
-        assert event["event"]["event_type"] == "tivolli.product.scraped"
+        assert event["source"] == "garimpo"
+        assert event["sourcetype"] == "garimpo"
+        assert event["event"]["event_type"] == "garimpo.product.scraped"
         assert event["event"]["id"] == 42

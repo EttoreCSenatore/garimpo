@@ -14,8 +14,8 @@ title: Primeiros passos
 ## Rodar a API localmente
 
 ```bash
-git clone https://github.com/EttoreCSenatore/tivolli-sports.git
-cd tivolli-sports
+git clone https://github.com/EttoreCSenatore/garimpo.git
+cd garimpo
 python -m venv .venv
 .venv/bin/pip install -r requirements.txt
 cp .env.example .env
@@ -53,7 +53,7 @@ npm run dev        # http://localhost:5173, faz proxy de /api para :8000
 .venv/bin/python -m pytest tests -q
 ```
 
-Os testes nunca acessam a rede nem o seu `tivolli.db` local: `tests/conftest.py` usa um banco temporário e desativa o agendador.
+Os testes nunca acessam a rede nem o seu `garimpo.db` local: `tests/conftest.py` usa um banco temporário e desativa o agendador.
 
 ## Rodar com Docker
 

@@ -4,7 +4,7 @@
 
 Please **do not open a public issue** for security problems. Use GitHub's private reporting:
 **Security → Report a vulnerability** on this repository
-(https://github.com/EttoreCSenatore/tivolli-sports/security/advisories/new).
+(https://github.com/EttoreCSenatore/garimpo/security/advisories/new).
 
 I aim to acknowledge reports within a few days. This is a personal project maintained on a best-effort basis.
 
@@ -17,5 +17,5 @@ Only the latest commit on `main` is supported.
 - Set `ADMIN_TOKEN` to a random value (`openssl rand -hex 32`); the app refuses to start in production without one.
 - Keep the API behind a TLS-terminating reverse proxy; the compose file binds to loopback only.
 - Keep `SPLUNK_HEC_VERIFY_SSL=true` except for a local, self-signed Splunk.
-- Never commit `.env`, `tivolli.db` or `events.jsonl` (they are git-ignored).
+- Never commit `.env`, `garimpo.db` or `events.jsonl` (they are git-ignored).
 - Scrape only with permission, respect `robots.txt` and the site's terms; see the README disclaimer.

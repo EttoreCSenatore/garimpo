@@ -13,7 +13,7 @@ Settings come from environment variables or a `.env` file (see `.env.example`). 
 | --- | --- | --- |
 | `APP_ENV` | `development` | `production` enables strict validation (see `ADMIN_TOKEN`). |
 | `HOST` / `PORT` | `127.0.0.1` / `8000` | Bind address. Containers set `HOST=0.0.0.0`. |
-| `DATABASE_URL` | `sqlite:///./tivolli.db` | Any SQLAlchemy URL. |
+| `DATABASE_URL` | `sqlite:///./garimpo.db` | Any SQLAlchemy URL. |
 | `SCHEDULER_ENABLED` | `true` | Set `false` to disable background scraping. |
 | `DISCLAIMER` | `false` | Mark prices as indicative and expose `source_url`. |
 
@@ -31,7 +31,7 @@ Settings come from environment variables or a `.env` file (see `.env.example`). 
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `USER_AGENT` | `TivolliBot/1.0 (+repo URL)` | Identify your bot and give a way to contact you. |
+| `USER_AGENT` | `GarimpoBot/1.0 (+repo URL)` | Identify your bot and give a way to contact you. |
 | `BASE_URL` | `https://www.tivolli.com.br` | Site to crawl. |
 | `REQUESTS_PER_SECOND` | `1` | Process-wide request budget. |
 | `JITTER_MIN_MS` / `JITTER_MAX_MS` | `500` / `1500` | Random delay added to each request. |

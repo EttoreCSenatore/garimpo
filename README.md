@@ -1,18 +1,22 @@
-# Tivolli Sports: scraper, REST API and chat search
+# Garimpo
 
-[![CI](https://github.com/EttoreCSenatore/tivolli-sports/actions/workflows/ci.yml/badge.svg)](https://github.com/EttoreCSenatore/tivolli-sports/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/EttoreCSenatore/tivolli-sports/actions/workflows/codeql.yml/badge.svg)](https://github.com/EttoreCSenatore/tivolli-sports/actions/workflows/codeql.yml)
+Catalog scraper, REST API and conversational product search.
+
+[![CI](https://github.com/EttoreCSenatore/garimpo/actions/workflows/ci.yml/badge.svg)](https://github.com/EttoreCSenatore/garimpo/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/EttoreCSenatore/garimpo/actions/workflows/codeql.yml/badge.svg)](https://github.com/EttoreCSenatore/garimpo/actions/workflows/codeql.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-📖 **Documentation (English · Português):** https://ettorecsenatore.github.io/tivolli-sports/
+📖 **Documentation (English · Português):** https://ettorecsenatore.github.io/garimpo/
 
-A rate-limited catalog scraper, FastAPI REST API and conversational search (React) for the Brazilian sports e-commerce site **tivolli.com.br**, with Splunk HEC event forwarding.
+*Garimpo* is Brazilian Portuguese for prospecting; *garimpar* is what you do when you hunt for a good find or a bargain. The project keeps a fresh copy of an online store's catalog and lets people dig through it in plain language.
+
+It is a rate-limited catalog scraper, FastAPI REST API and conversational search (React) for the Brazilian sports e-commerce site **tivolli.com.br** (Tivolli Sports, the store), with Splunk HEC event forwarding.
 
 ![Chat search with product cards](website/static/img/screenshots/chat-results.png)
 
 > Screenshots use generic demo data (`python -m app.seed`), not the store's real catalog.
 
-> **Responsible use:** this software scrapes publicly available catalog data from tivolli.com.br. You **must have permission** to scrape the site before running it, and respect its `robots.txt` and terms of service. No personal data is collected. The disallowed paths `/tivadm43` and `/homologacao` are blocked in code. See [Responsible use](https://ettorecsenatore.github.io/tivolli-sports/responsible-use).
+> **Responsible use:** this software scrapes publicly available catalog data from tivolli.com.br. You **must have permission** to scrape the site before running it, and respect its `robots.txt` and terms of service. No personal data is collected. The disallowed paths `/tivadm43` and `/homologacao` are blocked in code. See [Responsible use](https://ettorecsenatore.github.io/garimpo/responsible-use).
 
 ## Features
 
@@ -57,20 +61,20 @@ export ADMIN_TOKEN=$(openssl rand -hex 32)   # required; compose refuses to star
 docker compose up --build
 ```
 
-The port is published on `127.0.0.1:8000` only; put a TLS reverse proxy in front for public access. See [Deployment](https://ettorecsenatore.github.io/tivolli-sports/deployment).
+The port is published on `127.0.0.1:8000` only; put a TLS reverse proxy in front for public access. See [Deployment](https://ettorecsenatore.github.io/garimpo/deployment).
 
 ## Configuration
 
-All settings are in [.env.example](.env.example) and documented in [Configuration](https://ettorecsenatore.github.io/tivolli-sports/configuration). The most important:
+All settings are in [.env.example](.env.example) and documented in [Configuration](https://ettorecsenatore.github.io/garimpo/configuration). The most important:
 
 | Variable | Default | Description |
 |---|---|---|
 | `ADMIN_TOKEN` | *(empty)* | Empty disables `/admin/*`; must be 24+ random characters when `APP_ENV=production` |
 | `SCHEDULER_ENABLED` | `true` | Set `false` to disable background scraping |
-| `USER_AGENT` | `TivolliBot/1.0 (+repo URL)` | Identify your crawler and a way to contact you |
+| `USER_AGENT` | `GarimpoBot/1.0 (+repo URL)` | Identify your crawler and a way to contact you |
 | `REQUESTS_PER_SECOND` | `1` | Process-wide request budget |
 | `CORS_ORIGINS` | `http://localhost:5173,...` | Browser origins allowed to call the API |
-| `DATABASE_URL` | `sqlite:///./tivolli.db` | Any SQLAlchemy URL |
+| `DATABASE_URL` | `sqlite:///./garimpo.db` | Any SQLAlchemy URL |
 | `SPLUNK_HEC_URL` / `SPLUNK_HEC_TOKEN` | local HEC / *(empty)* | Without a token, events stay in `events.jsonl` |
 | `DISCLAIMER` | `false` | Mark prices as indicative and add `source_url` |
 
@@ -107,22 +111,22 @@ Chat replies are in Portuguese, for example:
 }
 ```
 
-More in [REST API](https://ettorecsenatore.github.io/tivolli-sports/api) and [Chat search](https://ettorecsenatore.github.io/tivolli-sports/chat-search).
+More in [REST API](https://ettorecsenatore.github.io/garimpo/api) and [Chat search](https://ettorecsenatore.github.io/garimpo/chat-search).
 
 ## Splunk Free
 
-1. In Splunk: **Settings → Data Inputs → HTTP Event Collector → New Token**, named `tivolli-scraper`. Leave **Indexer Acknowledgment disabled**: the client does not send a channel id, which acknowledgment requires.
+1. In Splunk: **Settings → Data Inputs → HTTP Event Collector → New Token**, named `garimpo`. Leave **Indexer Acknowledgment disabled**: the client does not send a channel id, which acknowledgment requires.
 2. Put the token in `.env` as `SPLUNK_HEC_TOKEN`.
 3. Only for a local Splunk with a self-signed certificate, set `SPLUNK_HEC_VERIFY_SSL=false`. Keep it `true` (the default) otherwise.
 
 ```
-sourcetype=tivolli | stats count by event_type | sort -count
+sourcetype=garimpo | stats count by event_type | sort -count
 ```
 
 Alert when more than 5% of products disappear in a run:
 
 ```
-sourcetype=tivolli event_type=tivolli.run.completed products_scraped>0
+sourcetype=garimpo event_type=garimpo.run.completed products_scraped>0
 | eval disappear_pct = (products_disappeared / products_scraped) * 100
 | where disappear_pct > 5
 | table _time run_id products_scraped products_disappeared disappear_pct
@@ -156,7 +160,7 @@ ruff check .
 cd frontend && npx tsc --noEmit && npm run build
 ```
 
-CI runs these plus `pip-audit`, `npm audit` and a Docker build; CodeQL scans every pull request. Tests never hit the real site and never touch your local `tivolli.db`.
+CI runs these plus `pip-audit`, `npm audit` and a Docker build; CodeQL scans every pull request. Tests never hit the real site and never touch your local `garimpo.db`.
 
 ## Security and license
 

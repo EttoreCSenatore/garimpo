@@ -113,7 +113,7 @@ async def _emit_product_events(product: Product, changed: bool, disappeared: boo
     if disappeared:
         await hec.send(
             {
-                "event_type": "tivolli.product.disappeared",
+                "event_type": "garimpo.product.disappeared",
                 "id": product.id,
                 "name": product.name,
                 "url": product.url,
@@ -123,7 +123,7 @@ async def _emit_product_events(product: Product, changed: bool, disappeared: boo
 
     await hec.send(
         {
-            "event_type": "tivolli.product.scraped",
+            "event_type": "garimpo.product.scraped",
             "id": product.id,
             "name": product.name,
             "price": str(product.price) if product.price else None,
@@ -134,7 +134,7 @@ async def _emit_product_events(product: Product, changed: bool, disappeared: boo
     if changed:
         await hec.send(
             {
-                "event_type": "tivolli.product.updated",
+                "event_type": "garimpo.product.updated",
                 "id": product.id,
                 "name": product.name,
                 "new_price": str(product.price) if product.price else None,
@@ -171,7 +171,7 @@ async def refresh_single_product_async(product_id: int) -> None:
     except Exception as exc:
         logger.error("task.refresh_single.error", product_id=product_id, error=str(exc))
         await hec.send(
-            {"event_type": "tivolli.error.http", "product_id": product_id, "error": str(exc)}
+            {"event_type": "garimpo.error.http", "product_id": product_id, "error": str(exc)}
         )
     finally:
         inflight_single.discard(product_id)
@@ -196,7 +196,7 @@ async def _run_full_refresh() -> None:
     start = datetime.now(UTC)
 
     try:
-        await hec.send({"event_type": "tivolli.run.started", "run_id": run_id, "run_type": "full"})
+        await hec.send({"event_type": "garimpo.run.started", "run_id": run_id, "run_type": "full"})
 
         categories = await discover_categories(client)
         all_product_urls: list[tuple[str, int | None]] = []
@@ -251,7 +251,7 @@ async def _run_full_refresh() -> None:
 
         await hec.send(
             {
-                "event_type": "tivolli.run.completed",
+                "event_type": "garimpo.run.completed",
                 "run_id": run_id,
                 "run_type": "full",
                 "products_scraped": scraped,
@@ -271,7 +271,7 @@ async def _run_full_refresh() -> None:
                 session.add(r)
                 session.commit()
         await hec.send(
-            {"event_type": "tivolli.error.http", "run_id": run_id, "error": str(exc)}
+            {"event_type": "garimpo.error.http", "run_id": run_id, "error": str(exc)}
         )
     finally:
         active_workers["full"] -= 1
@@ -333,7 +333,7 @@ async def _run_incremental_refresh() -> None:
 
         await hec.send(
             {
-                "event_type": "tivolli.run.completed",
+                "event_type": "garimpo.run.completed",
                 "run_id": run_id,
                 "run_type": "incremental",
                 "products_scraped": scraped,

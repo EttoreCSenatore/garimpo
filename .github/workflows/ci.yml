@@ -60,4 +60,4 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - run: docker build -t tivolli-sports:ci .
+      - run: docker build -t garimpo:ci .

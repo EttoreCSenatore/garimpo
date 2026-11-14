@@ -23,14 +23,14 @@ class Settings(BaseSettings):
     port: int = 8000
 
     # Identify the bot honestly and give site owners a way to reach you.
-    user_agent: str = "TivolliBot/1.0 (+https://github.com/EttoreCSenatore/tivolli-sports)"
+    user_agent: str = "GarimpoBot/1.0 (+https://github.com/EttoreCSenatore/garimpo)"
     base_url: str = "https://www.tivolli.com.br"
     requests_per_second: float = 1.0
     jitter_min_ms: int = 500
     jitter_max_ms: int = 1500
     max_retries: int = 3
 
-    database_url: str = "sqlite:///./tivolli.db"
+    database_url: str = "sqlite:///./garimpo.db"
 
     # Empty means the admin endpoints are disabled. In production a strong
     # token is mandatory (see validate_for_runtime).

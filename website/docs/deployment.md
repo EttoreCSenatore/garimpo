@@ -18,7 +18,7 @@ The compose file is hardened by default:
 - the port is published on **127.0.0.1 only**; put a TLS-terminating reverse proxy in front for public access
 - `ADMIN_TOKEN` is required (no default), and `APP_ENV=production` rejects weak tokens at startup
 - the container runs as an **unprivileged user** with a **read-only root filesystem**, all capabilities dropped and `no-new-privileges`
-- state lives in the `tivolli_data` volume (`/app/data`): the SQLite database and the Splunk buffer
+- state lives in the `garimpo_data` volume (`/app/data`): the SQLite database and the Splunk buffer
 - the health check calls `/api/health` with Python, so the image contains no `curl`
 
 ## Reverse proxy
@@ -34,7 +34,7 @@ Set `CORS_ORIGINS` to the origin that serves your frontend.
 
 ## Backups
 
-Copy the SQLite database with `sqlite3 tivolli.db ".backup backup.db"`, which is safe while the app runs in WAL mode.
+Copy the SQLite database with `sqlite3 garimpo.db ".backup backup.db"`, which is safe while the app runs in WAL mode.
 The catalog can always be rebuilt by a full refresh, but price history cannot.
 
 ## Operations checklist
