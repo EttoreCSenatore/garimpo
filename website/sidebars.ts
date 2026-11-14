@@ -1,0 +1,26 @@
+import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
+
+const sidebars: SidebarsConfig = {
+  docs: [
+    'intro',
+    'getting-started',
+    {
+      type: 'category',
+      label: 'System',
+      collapsed: false,
+      items: ['architecture', 'api', 'chat-search', 'configuration'],
+    },
+    {
+      type: 'category',
+      label: 'Operations',
+      items: ['deployment', 'security', 'responsible-use'],
+    },
+    {
+      type: 'category',
+      label: 'Project',
+      items: ['development', 'roadmap'],
+    },
+  ],
+};
+
+export default sidebars;
