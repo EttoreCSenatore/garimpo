@@ -30,7 +30,7 @@ As capturas de tela desta documentação usam produtos genéricos de demonstraç
 
 - Educado por padrão: orçamento de requisições global ao processo, caminhos proibidos pelo `robots.txt` bloqueados no código, apenas URLs do mesmo site.
 - Padrões seguros: proxy de imagens à prova de SSRF, token de admin com comparação em tempo constante, CORS restrito, limites de taxa, contêiner sem root.
-- Testado: 90 testes automatizados com HTTP simulado, sem rede e sem banco real.
+- Testado: uma suíte pytest com HTTP simulado, sem rede e sem banco real, executada pelo CI em cada pull request.
 - Documentado em inglês e em português do Brasil.
 
 ## Próximos passos

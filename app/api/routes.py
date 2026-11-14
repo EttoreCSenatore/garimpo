@@ -371,7 +371,7 @@ async def proxy_image(url: str = Query(..., max_length=2048)):
                         raise HTTPException(status_code=502, detail="Falha ao buscar imagem")
 
                     declared = resp.headers.get("content-length")
-                    if declared and declared.isdigit() and int(declared) > settings.image_proxy_max_bytes:
+                    if declared and declared.isascii() and declared.isdigit() and int(declared) > settings.image_proxy_max_bytes:
                         raise HTTPException(status_code=502, detail="Imagem muito grande")
 
                     body = bytearray()
@@ -575,9 +575,9 @@ async def chat(
 
     # Resposta numérica direta à pergunta do número (ex.: "38")
     if session.get("awaiting") == "size" and intent.size is None:
-        m = re.fullmatch(r"\s*(\d{1,2})\s*", payload.message)
-        if m and 16 <= int(m.group(1)) <= 50:
-            intent.size = int(m.group(1))
+        answer = payload.message.strip()
+        if answer.isascii() and answer.isdigit() and len(answer) <= 2 and 16 <= int(answer) <= 50:
+            intent.size = int(answer)
 
     if intent.gender:
         prefs["gender"] = intent.gender

@@ -252,3 +252,13 @@ def test_resolve_allowed_url_uses_exact_hosts_only():
     )
     assert resolve_allowed_url("https://evil.tivollisports.com.br/a.jpg", allowed) is None
     assert resolve_allowed_url("https://estatico.tivollisports.com.br:8443/a.jpg", allowed) is None
+
+
+def test_chat_size_answer_handles_unicode_digits_and_whitespace(client):
+    sid = "unicode-digits"
+    assert client.post("/api/chat", json={"message": "quero um tênis feminino", "session_id": sid}).status_code == 200
+    # "²" is a Unicode digit that int() rejects; it must not crash the endpoint.
+    assert client.post("/api/chat", json={"message": "²", "session_id": sid}).status_code == 200
+    r = client.post("/api/chat", json={"message": " " * 400 + "38", "session_id": sid})
+    assert r.status_code == 200
+    assert r.json()["filters_applied"].get("size") == 38

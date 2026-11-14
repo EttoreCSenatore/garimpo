@@ -1,4 +1,4 @@
-# Tivolli Scraper + API + Splunk HEC
+# Tivolli Sports: scraper, REST API and chat search
 
 [![CI](https://github.com/EttoreCSenatore/tivolli-sports/actions/workflows/ci.yml/badge.svg)](https://github.com/EttoreCSenatore/tivolli-sports/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/EttoreCSenatore/tivolli-sports/actions/workflows/codeql.yml/badge.svg)](https://github.com/EttoreCSenatore/tivolli-sports/actions/workflows/codeql.yml)
@@ -6,249 +6,159 @@
 
 📖 **Documentation (English · Português):** https://ettorecsenatore.github.io/tivolli-sports/
 
+A rate-limited catalog scraper, FastAPI REST API and conversational search (React) for the Brazilian sports e-commerce site **tivolli.com.br**, with Splunk HEC event forwarding.
+
 ![Chat search with product cards](website/static/img/screenshots/chat-results.png)
 
 > Screenshots use generic demo data (`python -m app.seed`), not the store's real catalog.
 
-Production-ready web scraper and REST API for the Brazilian e-commerce site **tivolli.com.br**, with near-real-time catalog freshness and Splunk HEC event forwarding.
-
-> **Responsible-Use Disclaimer**: This software scrapes publicly available catalog data from tivolli.com.br. The operator **must verify they have legal permission** to scrape this site before running it. Respect `robots.txt`, rate limits, and the site's terms of service. Do not collect personal/customer data. The disallowed paths `/tivadm43` and `/homologacao` are never accessed.
+> **Responsible use:** this software scrapes publicly available catalog data from tivolli.com.br. You **must have permission** to scrape the site before running it, and respect its `robots.txt` and terms of service. No personal data is collected. The disallowed paths `/tivadm43` and `/homologacao` are blocked in code. See [Responsible use](https://ettorecsenatore.github.io/tivolli-sports/responsible-use).
 
 ## Features
 
-- **Category discovery** via `sitemap.xml` (hourly)
-- **Listing crawler** with pagination (`/c/{id}-{slug}?p=N`)
-- **Product detail parser** extracting price, boleto price, installments, sizes, stock, images, breadcrumbs
-- **REST API** with FastAPI + OpenAPI docs, cursor pagination, caching
-- **Splunk HEC integration** with batching, retries, and local buffer fallback
-- **APScheduler** for full (6h) and incremental (15min) refreshes
-- **SQLite** (WAL mode) via SQLModel
-- **Rate limiting**: max 1 req/s with 500–1500ms jitter and exponential backoff
+- **Scraper**: categories from `sitemap.xml`, paginated listings (`/c/{id}-{slug}?p=N`), product pages (price, boleto price, installments, sizes, stock, images, breadcrumbs)
+- **Polite by design**: one process-wide budget of ~1 request/second with 500–1500 ms jitter and exponential back-off; same-site URLs only
+- **Freshness**: full refresh every 6 h, the 200 most viewed products every 15 min, and a background refresh when a product older than 5 min is viewed
+- **REST API**: FastAPI with OpenAPI docs, cursor pagination, filters, price history and HTTP cache headers
+- **Chat search**: a rule-based intent parser (Portuguese and English, no LLM or API keys) that asks for gender and shoe size when needed
+- **Splunk HEC**: batched events with retries and an on-disk buffer while Splunk is unreachable
+- **Secure defaults**: SSRF-safe image proxy, admin token required in production, strict CORS, rate limits, non-root read-only container
 
-## Project Structure
+## Quick start
 
-```
-tivolli-scraper/
-├── app/
-│   ├── main.py              # FastAPI app + APScheduler
-│   ├── config.py            # pydantic-settings
-│   ├── models.py            # SQLModel: Product, Category, ScrapeRun, ProductHistory
-│   ├── db.py                # SQLModel engine + WAL
-│   ├── splunk_hec.py        # Async HEC client
-│   ├── tasks.py             # APScheduler jobs
-│   ├── scraper/
-│   │   ├── client.py        # Rate-limited httpx + jitter
-│   │   ├── categories.py    # sitemap.xml → categories
-│   │   ├── listings.py      # /c/{id}-{slug}?p=N pages
-│   │   └── products.py      # product detail parser
-│   └── api/
-│       ├── routes.py        # FastAPI endpoints
-│       └── dependencies.py  # DB session, admin auth
-├── tests/
-│   ├── fixtures/            # sample HTML
-│   ├── test_scraper.py
-│   ├── test_api.py
-│   └── test_splunk.py
-├── .env.example
-├── .gitignore
-├── Dockerfile
-├── docker-compose.yml
-├── requirements.txt
-├── pyproject.toml
-└── README.md
-```
-
-## Setup (Local)
-
-### Prerequisites
-
-- Python 3.12+
-- pip
-
-### Install
+Requires Python 3.12+ (and Node.js 20.19+ or 22.12+ for the frontend).
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+.venv/bin/pip install -r requirements.txt
 cp .env.example .env
+
+# Explore with demo data and no scraping:
+export SCHEDULER_ENABLED=false
+.venv/bin/python -m app.seed
+.venv/bin/python -m uvicorn app.main:app --reload --port 8000
 ```
 
-### Run
+- API: http://127.0.0.1:8000 · interactive docs: http://127.0.0.1:8000/docs
+- With `SCHEDULER_ENABLED=true` (the default) a full scrape starts about one minute after startup.
+
+Chat frontend (proxies `/api` to port 8000):
 
 ```bash
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+cd frontend
+npm ci
+npm run dev        # http://localhost:5173
 ```
-
-- API: http://localhost:8000
-- Docs: http://localhost:8000/docs
 
 ## Run with Docker
 
 ```bash
+export ADMIN_TOKEN=$(openssl rand -hex 32)   # required; compose refuses to start without it
 docker compose up --build
 ```
 
-API available at http://localhost:8000, docs at http://localhost:8000/docs.
+The port is published on `127.0.0.1:8000` only; put a TLS reverse proxy in front for public access. See [Deployment](https://ettorecsenatore.github.io/tivolli-sports/deployment).
 
-## Environment Variables
+## Configuration
 
-See [.env.example](.env.example) for the full list. Key variables:
+All settings are in [.env.example](.env.example) and documented in [Configuration](https://ettorecsenatore.github.io/tivolli-sports/configuration). The most important:
 
 | Variable | Default | Description |
 |---|---|---|
-| `USER_AGENT` | `TivolliBot/1.0 (...)` | Crawler User-Agent |
-| `REQUESTS_PER_SECOND` | `1` | Global rate limit |
-| `DATABASE_URL` | `sqlite:///./tivolli.db` | SQLite path |
-| `ADMIN_TOKEN` | *(empty)* | Admin API token. Empty disables `/admin/*`; must be 24+ random characters when `APP_ENV=production` |
-| `SPLUNK_HEC_URL` | `https://localhost:8088/services/collector/event` | HEC endpoint |
-| `SPLUNK_HEC_TOKEN` | _(empty)_ | HEC token |
-| `DISCLAIMER` | `false` | If `true`, prices marked "indicative" |
+| `ADMIN_TOKEN` | *(empty)* | Empty disables `/admin/*`; must be 24+ random characters when `APP_ENV=production` |
+| `SCHEDULER_ENABLED` | `true` | Set `false` to disable background scraping |
+| `USER_AGENT` | `TivolliBot/1.0 (+repo URL)` | Identify your crawler and a way to contact you |
+| `REQUESTS_PER_SECOND` | `1` | Process-wide request budget |
+| `CORS_ORIGINS` | `http://localhost:5173,...` | Browser origins allowed to call the API |
+| `DATABASE_URL` | `sqlite:///./tivolli.db` | Any SQLAlchemy URL |
+| `SPLUNK_HEC_URL` / `SPLUNK_HEC_TOKEN` | local HEC / *(empty)* | Without a token, events stay in `events.jsonl` |
+| `DISCLAIMER` | `false` | Mark prices as indicative and add `source_url` |
 
-## API Endpoints
+## API
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/` | Health check + last refresh |
-| `GET` | `/products` | List products (filters: category, brand, price, available, q) |
-| `GET` | `/products/{id}` | Single product (triggers background refresh if stale) |
-| `GET` | `/products/{id}/history` | Price/stock history |
+| `GET` | `/api/health` (also `/`, `/api/`) | Health and time of the last completed refresh |
+| `GET` | `/products` | List products: `category_id`, `brand`, `min_price`, `max_price`, `available`, `q`, `cursor`, `limit` |
+| `GET` | `/products/{id}` | One product (queues a refresh if the data is older than 5 min) |
+| `GET` | `/products/{id}/history` | Price and stock history |
 | `GET` | `/categories` | Categories with product counts |
-| `GET` | `/stats` | Scraper stats (24h) |
-| `POST` | `/admin/refresh` | Trigger full refresh (header `X-Admin-Token`) |
-| `POST` | `/admin/refresh/{id}` | Refresh single product |
-| `GET` | `/admin/queue` | Queue depth + active workers |
-
-### Example curl
+| `GET` | `/stats` | Totals and 24 h success rate |
+| `POST` | `/api/chat` | Conversational search |
+| `GET` | `/api/image-proxy?url=` | Product images from allow-listed hosts |
+| `POST` | `/admin/refresh` | Start a full refresh (header `X-Admin-Token`) |
+| `POST` | `/admin/refresh/{id}` | Refresh one product |
+| `GET` | `/admin/queue` | Active workers, in-flight refreshes, chat sessions |
 
 ```bash
-curl http://localhost:8000/
-curl "http://localhost:8000/products?limit=10&available=true"
-curl http://localhost:8000/products/12345
-curl -X POST http://localhost:8000/admin/refresh -H "X-Admin-Token: your-token"
+curl "http://127.0.0.1:8000/products?brand=Nike&max_price=500&available=true&limit=10"
+curl -X POST http://127.0.0.1:8000/api/chat -H 'Content-Type: application/json' \
+  -d '{"message": "tênis feminino número 38", "session_id": "demo-1"}'
+curl -X POST http://127.0.0.1:8000/admin/refresh -H "X-Admin-Token: $ADMIN_TOKEN"
 ```
 
-## Configuring Splunk Free
+Chat replies are in Portuguese, for example:
 
-1. In Splunk Free: **Settings → Data Inputs → HTTP Event Collector → New Token**.
-   - Name it `tivolli-scraper`.
-   - Enable **Indexer Acknowledgment**.
-   - Leave index as `main` (or create a `tivolli` index).
-2. Copy the generated token into `.env` as `SPLUNK_HEC_TOKEN`.
-3. (Self-signed certs, local Splunk Free only) set `SPLUNK_HEC_VERIFY_SSL=false`. Keep it `true` (the default) for anything else.
+```json
+{
+  "reply": "Encontrei 4 produtos de **tênis** para **mulher** no **número 38**. Veja as melhores opções:",
+  "filters_applied": { "category": ["tenis"], "gender": "feminino", "size": 38 },
+  "products": [ ... ]
+}
+```
 
-### Sample Search
+More in [REST API](https://ettorecsenatore.github.io/tivolli-sports/api) and [Chat search](https://ettorecsenatore.github.io/tivolli-sports/chat-search).
+
+## Splunk Free
+
+1. In Splunk: **Settings → Data Inputs → HTTP Event Collector → New Token**, named `tivolli-scraper`. Leave **Indexer Acknowledgment disabled**: the client does not send a channel id, which acknowledgment requires.
+2. Put the token in `.env` as `SPLUNK_HEC_TOKEN`.
+3. Only for a local Splunk with a self-signed certificate, set `SPLUNK_HEC_VERIFY_SSL=false`. Keep it `true` (the default) otherwise.
 
 ```
 sourcetype=tivolli | stats count by event_type | sort -count
 ```
 
-### Sample Alert: >5% products disappeared in a run
+Alert when more than 5% of products disappear in a run:
 
 ```
-sourcetype=tivolli event_type=tivolli.run.completed
+sourcetype=tivolli event_type=tivolli.run.completed products_scraped>0
 | eval disappear_pct = (products_disappeared / products_scraped) * 100
 | where disappear_pct > 5
 | table _time run_id products_scraped products_disappeared disappear_pct
 ```
 
-## Testing
+## Project structure
+
+```text
+app/
+  main.py            FastAPI app, lifespan, scheduler, CORS, security headers
+  config.py          Settings from environment / .env (fails fast on unsafe production config)
+  security.py        Token check, URL allow-listing, rate limiter, security headers
+  state.py           Process-wide runtime state and background tasks
+  db.py, models.py   SQLModel engine (SQLite WAL), indexes, tables
+  tasks.py           Full / incremental / single refresh jobs
+  splunk_hec.py      Splunk HEC client with on-disk buffer
+  seed.py            Demo data (python -m app.seed)
+  scraper/           Rate-limited client, categories, listings, product parser
+  search/            Intent parser for the chat
+  api/               Routes and dependencies
+frontend/            React + Vite + TypeScript + Tailwind chat UI
+tests/               pytest suite (HTTP mocked, temporary database, no network)
+website/             Docusaurus documentation (English + Brazilian Portuguese)
+```
+
+## Development
 
 ```bash
-pytest tests/ -v
+ruff check .
+.venv/bin/python -m pytest tests -q
+cd frontend && npx tsc --noEmit && npm run build
 ```
 
-## Freshness Strategy
+CI runs these plus `pip-audit`, `npm audit` and a Docker build; CodeQL scans every pull request. Tests never hit the real site and never touch your local `tivolli.db`.
 
-- **Full catalog refresh**: every 6 hours
-- **Incremental refresh** (top 200 most-viewed): every 15 minutes
-- **On-demand**: `GET /products/{id}` revalidates in background if data > 5 min old
+## Security and license
 
----
-
-## 🤖 AI Chat Frontend
-
-A conversational search interface powered by a pure-Python intent parser — **no LLM API keys required**.
-
-### Frontend Setup
-
-> **Prerequisites**: Node.js 18+ and npm.
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Frontend available at **http://localhost:5173** — API requests are proxied to `http://localhost:8000`.
-
-### New API Endpoint
-
-| Method | Path | Description |
-|---|---|---|
-| `POST` | `/api/chat` | Conversational search — natural language → products |
-
-**Request body:**
-```json
-{ "message": "tênis de corrida nike under 400", "session_id": "uuid" }
-```
-
-**Response:**
-```json
-{
-  "reply": "I found 8 products in running from Nike under R$ 400. Here are the best matches:",
-  "filters_applied": { "category": ["running"], "brand": "Nike", "price_max": 400 },
-  "products": [ ...Product objects... ]
-}
-```
-
-### Query Examples the AI Understands
-
-| Query | What it extracts |
-|---|---|
-| `tênis de corrida` | category = running |
-| `chuteiras nike` | category = futebol, brand = Nike |
-| `nike under 400` | brand = Nike, price_max = 400 |
-| `tênis adidas abaixo de 500` | brand = Adidas, price_max = 500 |
-| `raquetes yonex` | category = tenis, brand = Yonex |
-| `tênis disponível` | available = true |
-| `asics acima de 200` | brand = Asics, price_min = 200 |
-| `running shoes between 200 and 600` | category = running, price range 200–600 |
-
-### Project Structure (updated)
-
-```
-tivolli-scraper/
-├── app/
-│   ├── search/
-│   │   ├── __init__.py
-│   │   └── intent_parser.py     # Smart Intent Parser (pure Python)
-│   └── api/
-│       └── routes.py            # + POST /api/chat endpoint
-├── frontend/                    # Vite + React + TypeScript + Tailwind
-│   ├── src/
-│   │   ├── api.ts               # fetch wrapper
-│   │   ├── types.ts             # shared TypeScript types
-│   │   ├── App.tsx
-│   │   ├── main.tsx
-│   │   ├── index.css            # Tailwind directives + animations
-│   │   ├── components/
-│   │   │   ├── ChatBubble.tsx   # user/bot message bubbles
-│   │   │   ├── ProductCard.tsx  # product card with image, price, stock
-│   │   │   └── TypingIndicator.tsx
-│   │   └── pages/
-│   │       └── ChatPage.tsx     # main chat layout
-│   ├── index.html
-│   ├── vite.config.ts           # proxy /api → localhost:8000
-│   ├── tailwind.config.js
-│   └── package.json
-└── ...
-```
-
-
-## Documentation, security and contributing
-
-- Full docs (architecture, API, chat search, configuration, deployment, security): https://ettorecsenatore.github.io/tivolli-sports/
 - Found a vulnerability? See [SECURITY.md](SECURITY.md) (private advisory form).
-- Quality gates: `ruff check .`, `python -m pytest tests -q`, `cd frontend && npx tsc --noEmit && npm run build`.
 - Licensed under the [MIT License](LICENSE).

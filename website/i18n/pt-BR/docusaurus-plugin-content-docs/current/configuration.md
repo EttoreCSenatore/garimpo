@@ -49,3 +49,7 @@ As configurações vêm de variáveis de ambiente ou de um arquivo `.env` (veja 
 | `SPLUNK_HEC_VERIFY_SSL` | `true` | Desative apenas para um Splunk local com certificado autoassinado. |
 | `SPLUNK_HEC_BATCH_SIZE` | `50` | Eventos por requisição. |
 | `SPLUNK_BUFFER_FILE` / `SPLUNK_BUFFER_MAX_LINES` | `events.jsonl` / `10000` | Local e limite do buffer offline (os mais novos são mantidos). |
+
+:::note Confirmação de indexação do Splunk
+Crie o token HEC com **Indexer Acknowledgment desativado**. O cliente não envia o id de canal que essa confirmação exige, então o Splunk rejeitaria todos os lotes.
+:::

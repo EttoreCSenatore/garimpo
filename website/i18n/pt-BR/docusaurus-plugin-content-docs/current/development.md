@@ -19,7 +19,7 @@ website/        Esta documentação (Docusaurus, inglês + português do Brasil)
 
 ```bash
 ruff check .                         # lint, incluindo regras de segurança (flake8-bandit)
-python -m pytest tests -q            # 90 testes, sem rede
+python -m pytest tests -q            # sem rede, banco temporário
 cd frontend && npx tsc --noEmit && npm run build
 ```
 
