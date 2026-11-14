@@ -30,7 +30,7 @@ The screenshots in this documentation use generic demo products (`python -m app.
 
 - Polite by design: a process-wide request budget, `robots.txt` disallowed paths enforced in code, same-site URLs only.
 - Secure defaults: SSRF-safe image proxy, constant-time admin token, strict CORS, rate limits, non-root container.
-- Tested: 90 automated tests with HTTP mocked, no network and no real database required.
+- Tested: a pytest suite with HTTP mocked, no network and no real database required, run by CI on every pull request.
 - Documented in English and Brazilian Portuguese.
 
 ## Where to go next

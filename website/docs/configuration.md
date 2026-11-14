@@ -49,3 +49,7 @@ Settings come from environment variables or a `.env` file (see `.env.example`). 
 | `SPLUNK_HEC_VERIFY_SSL` | `true` | Disable only for a local self-signed Splunk. |
 | `SPLUNK_HEC_BATCH_SIZE` | `50` | Events per request. |
 | `SPLUNK_BUFFER_FILE` / `SPLUNK_BUFFER_MAX_LINES` | `events.jsonl` / `10000` | Offline buffer location and cap (newest kept). |
+
+:::note Splunk indexer acknowledgment
+Create the HEC token with **Indexer Acknowledgment disabled**. The client does not send the channel id that acknowledgment requires, so Splunk would reject every batch.
+:::
