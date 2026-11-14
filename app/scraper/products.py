@@ -278,6 +278,7 @@ def infer_brand(name: str, codigo: str | None) -> str | None:
     }
     text = (name + " " + (codigo or "")).lower()
     for key, brand in brand_map.items():
-        if key in text:
+        # Word boundaries so "head" does not match "ahead" or "fila" "filame".
+        if re.search(rf"(?<![a-z0-9]){re.escape(key)}(?![a-z0-9])", text):
             return brand
     return None

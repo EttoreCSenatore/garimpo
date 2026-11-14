@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
+import os
 import socket
 import time
 from pathlib import Path
@@ -69,27 +71,28 @@ class SplunkHECLogger:
             await self._flush_locked()
 
     async def _flush_locked(self) -> None:
-        if not self._buffer:
-            return
-        buffered = self._buffer
+        """Send everything pending (buffer file first, then memory).
+
+        Events that could not be delivered replace the contents of the buffer
+        file, so nothing is duplicated and delivered events are removed.
+        """
+        pending = self._read_buffer_file() + self._buffer
         self._buffer = []
+        if not pending:
+            return
 
-        from_buffer = self._read_buffer_file()
-        all_events = from_buffer + buffered
-        chunks = [all_events[i:i + self.batch_size] for i in range(0, len(all_events), self.batch_size)]
-
-        success = True
-        for chunk in chunks:
+        failed: list[dict] = []
+        for i in range(0, len(pending), self.batch_size):
+            chunk = pending[i : i + self.batch_size]
             if not await self._send_chunk(chunk):
-                success = False
-                self._write_buffer_file(chunk)
-
-        if success:
-            self._clear_buffer_file()
+                # Splunk is unreachable or rejecting us: keep this and all later events
+                # instead of burning retries on every remaining chunk.
+                failed = pending[i:]
+                break
+        self._write_buffer_file(failed)
 
     async def _send_chunk(self, events: list[dict]) -> bool:
         if not self.token:
-            self._write_buffer_file(events)
             logger.warning("splunk_hec.token_not_set", buffered=len(events))
             return False
 
@@ -121,37 +124,37 @@ class SplunkHECLogger:
         path = Path(self.buffer_file)
         if not path.exists():
             return []
+        events: list[dict] = []
         try:
-            events: list[dict] = []
             with path.open("r", encoding="utf-8") as f:
                 for line in f:
                     line = line.strip()
-                    if line:
+                    if not line:
+                        continue
+                    try:
                         events.append(json.loads(line))
-            return events
-        except Exception:
-            return []
+                    except json.JSONDecodeError:
+                        logger.warning("splunk_hec.buffer_bad_line")
+        except OSError as exc:
+            logger.error("splunk_hec.buffer_read_error", error=str(exc))
+        return events
 
     def _write_buffer_file(self, events: list[dict]) -> None:
+        """Replace the buffer file with ``events`` (capped); remove it when empty."""
         path = Path(self.buffer_file)
-        existing = self._read_buffer_file()
-        combined = existing + events
-        if len(combined) > self.buffer_max_lines:
-            combined = combined[-self.buffer_max_lines:]
-        try:
-            with path.open("w", encoding="utf-8") as f:
-                for e in combined:
-                    f.write(json.dumps(e) + "\n")
-        except Exception as exc:
-            logger.error("splunk_hec.buffer_write_error", error=str(exc))
-
-    def _clear_buffer_file(self) -> None:
-        path = Path(self.buffer_file)
-        if path.exists():
-            try:
+        if not events:
+            with contextlib.suppress(FileNotFoundError, OSError):
                 path.unlink()
-            except OSError:
-                pass
+            return
+        events = events[-self.buffer_max_lines :]
+        tmp = path.with_name(path.name + ".tmp")
+        try:
+            with tmp.open("w", encoding="utf-8") as f:
+                for e in events:
+                    f.write(json.dumps(e) + "\n")
+            os.replace(tmp, path)
+        except OSError as exc:
+            logger.error("splunk_hec.buffer_write_error", error=str(exc))
 
     async def aclose(self) -> None:
         await self.flush()

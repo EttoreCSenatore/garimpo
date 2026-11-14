@@ -18,6 +18,17 @@ from app.state import active_workers, get_run_lock, inflight_single
 logger = structlog.get_logger()
 
 
+def _history_entry(product_id: int, data: dict, now: datetime) -> ProductHistory:
+    return ProductHistory(
+        product_id=product_id,
+        price=data.get("price"),
+        price_boleto=data.get("price_boleto"),
+        available=data.get("available", False),
+        status=data.get("status", ProductStatus.ACTIVE),
+        scraped_at=data.get("scraped_at", now),
+    )
+
+
 def _save_product(data: dict) -> tuple[Product, bool]:
     product_id = data["id"]
     changed = False
@@ -36,17 +47,14 @@ def _save_product(data: dict) -> tuple[Product, bool]:
                 return existing, changed
             return None, changed
 
-        history_entry = ProductHistory(
-            product_id=product_id,
-            price=data.get("price"),
-            price_boleto=data.get("price_boleto"),
-            available=data.get("available", False),
-            status=data.get("status", ProductStatus.ACTIVE),
-            scraped_at=data.get("scraped_at", now),
-        )
-        session.add(history_entry)
-
         if existing:
+            # Only the fields we track over time decide whether a history row is worth storing.
+            tracked_changed = (
+                existing.price != data.get("price")
+                or existing.price_boleto != data.get("price_boleto")
+                or existing.available != data.get("available", False)
+                or existing.status != data.get("status", ProductStatus.ACTIVE)
+            )
             if existing.price != data.get("price") or existing.available != data.get("available"):
                 changed = True
             existing.slug = data["slug"]
@@ -68,7 +76,10 @@ def _save_product(data: dict) -> tuple[Product, bool]:
             existing.scraped_at = data.get("scraped_at", now)
             existing.updated_at = now
             session.add(existing)
+            if tracked_changed:
+                session.add(_history_entry(product_id, data, now))
         else:
+            session.add(_history_entry(product_id, data, now))
             product = Product(
                 id=product_id,
                 slug=data["slug"],

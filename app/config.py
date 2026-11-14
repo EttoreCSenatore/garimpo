@@ -67,7 +67,6 @@ class Settings(BaseSettings):
     disclaimer: bool = False
 
     cache_ttl_seconds: int = 60
-    hot_product_cache_size: int = 500
 
     @property
     def robots_disallowed(self) -> list[str]:
