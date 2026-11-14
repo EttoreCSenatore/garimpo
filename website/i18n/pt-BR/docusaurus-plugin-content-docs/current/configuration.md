@@ -23,7 +23,7 @@ As configurações vêm de variáveis de ambiente ou de um arquivo `.env` (veja 
 | --- | --- | --- |
 | `ADMIN_TOKEN` | *(vazio)* | Vazio desativa `/admin/*`. Em produção deve ter 24+ caracteres aleatórios. |
 | `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Origens de navegador permitidas, separadas por vírgula. `*` é ignorado. |
-| `IMAGE_PROXY_ALLOWED_HOSTS` | `estatico.tivollisports.com.br,www.tivolli.com.br` | Hostnames exatos que o proxy de imagens pode acessar. |
+| `IMAGE_PROXY_ALLOWED_HOSTS` | `www.tivolli.com.br` | Hostnames exatos que o proxy de imagens pode acessar. |
 | `CHAT_RATE_LIMIT_PER_MINUTE` / `IMAGE_RATE_LIMIT_PER_MINUTE` | `30` / `240` | Limites por cliente; `0` desativa. |
 | `TRUST_PROXY_HEADERS` | `false` | Usa `X-Forwarded-For` para identificar o cliente (somente atrás de proxy confiável). |
 

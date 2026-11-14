@@ -21,7 +21,7 @@ As capturas de tela desta documentação usam produtos genéricos de demonstraç
 
 | Parte | O que faz |
 | --- | --- |
-| **Scraper** | Descobre categorias pelo `sitemap.xml` e percorre listagens e páginas de produto a ~1 requisição por segundo, com jitter e espera progressiva. |
+| **Scraper** | Descobre categorias pelo `google_sitemap.xml` e percorre listagens e páginas de produto a ~1 requisição por segundo, com jitter e espera progressiva. |
 | **API REST** | Serviço FastAPI com paginação por cursor, filtros, histórico de preços e documentação OpenAPI. |
 | **Busca por chat** | Um interpretador de intenção baseado em regras (sem LLM, sem chaves de API) transforma uma frase em filtros e pergunta gênero e número do calçado quando necessário. |
 | **Frontend** | Interface de chat em React + TypeScript + Tailwind que exibe os produtos como cartões. |

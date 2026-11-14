@@ -46,7 +46,7 @@ class Product(SQLModel, table=True):
     currency: str = Field(default="BRL", max_length=8)
     price: Decimal | None = Field(default=None)
     price_boleto: Decimal | None = Field(default=None)
-    installments: dict | None = Field(default=None, sa_column=Column(JSON))
+    installments: dict | None = Field(default=None, sa_column=Column(JSON(none_as_null=True)))
     sizes: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     available: bool = Field(default=False)
     description: str | None = Field(default=None)

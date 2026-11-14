@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import json
 import re
 from datetime import UTC, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+from urllib.parse import urlparse
 
 import structlog
 from selectolax.lexbor import LexborHTMLParser as HTMLParser
@@ -13,20 +15,31 @@ from app.security import safe_http_url
 
 logger = structlog.get_logger()
 
-PRODUCT_URL_RE = re.compile(r"(?:^|/)(\d+)-([\w-]+)")
+# Product pages live at /{slug}-{id} (Magento): a single path segment ending in the numeric id.
+PRODUCT_URL_RE = re.compile(r"^/([a-z0-9][a-z0-9-]*?)-(\d+)/?$")
 PRICE_RE = re.compile(r"R\$\s*([\d.]+,\d{2})")
-CODE_RE = re.compile(r"(?:[A-Z]{2}\d{4}\s*\d{3}|[A-Z]{2,4}\d{4,6})")
+PERCENT_RE = re.compile(r"-\s*(\d{1,2})\s*%")
+CENT = Decimal("0.01")
+
+
+def parse_product_url(url: str) -> tuple[int, str] | None:
+    """Return (id, slug) for a product URL, or None when the path is not a product page."""
+    m = PRODUCT_URL_RE.match(urlparse(url).path)
+    return (int(m.group(2)), m.group(1)) if m else None
+
+
+def _money(value) -> Decimal | None:
+    try:
+        return Decimal(str(value)).quantize(CENT, rounding=ROUND_HALF_UP)
+    except (InvalidOperation, ValueError, TypeError):
+        return None
 
 
 def _parse_price(text: str) -> Decimal | None:
     match = PRICE_RE.search(text)
     if not match:
         return None
-    raw = match.group(1).replace(".", "").replace(",", ".")
-    try:
-        return Decimal(raw)
-    except InvalidOperation:
-        return None
+    return _money(match.group(1).replace(".", "").replace(",", "."))
 
 
 def _extract_text(node) -> str:
@@ -35,183 +48,184 @@ def _extract_text(node) -> str:
     return node.text(strip=True) or ""
 
 
+def _json_ld(tree, type_name: str):
+    for node in tree.css('script[type="application/ld+json"]'):
+        try:
+            data = json.loads(node.text())
+        except ValueError:
+            continue
+        for item in data if isinstance(data, list) else [data]:
+            if isinstance(item, dict) and item.get("@type") == type_name:
+                return item
+    return None
+
+
+def _magento_init(tree):
+    """Yield every parsed ``text/x-magento-init`` JSON blob (the page's embedded config)."""
+    for node in tree.css('script[type="text/x-magento-init"]'):
+        try:
+            yield json.loads(node.text())
+        except ValueError:
+            continue
+
+
+def _find_gallery(tree) -> list[dict]:
+    def walk(obj):
+        if isinstance(obj, dict):
+            for value in obj.values():
+                found = walk(value)
+                if found:
+                    return found
+        elif isinstance(obj, list):
+            if obj and isinstance(obj[0], dict) and "full" in obj[0]:
+                return obj
+            for value in obj:
+                found = walk(value)
+                if found:
+                    return found
+        return None
+
+    for blob in _magento_init(tree):
+        found = walk(blob)
+        if found:
+            return found
+    return []
+
+
+def _find_options_config(tree) -> dict | None:
+    def walk(obj):
+        if isinstance(obj, dict):
+            if "optionPrices" in obj and isinstance(obj.get("attributes"), dict):
+                return obj
+            for value in obj.values():
+                found = walk(value)
+                if found:
+                    return found
+        elif isinstance(obj, list):
+            for value in obj:
+                found = walk(value)
+                if found:
+                    return found
+        return None
+
+    for blob in _magento_init(tree):
+        found = walk(blob)
+        if found:
+            return found
+    return None
+
+
+def _sizes_and_price(config: dict | None) -> tuple[list[str], Decimal | None]:
+    """Sizes still offered (Magento only lists options that can be bought) and their lowest price."""
+    if not config:
+        return [], None
+    attributes = [a for a in config["attributes"].values() if str(a.get("code", "")).startswith("tamanho")]
+    # Prefer the shoe-number attribute; fall back to a generic size (P/M/G, "Único").
+    attributes.sort(key=lambda a: a.get("code") != "tamanho_calcado")
+    for attr in attributes:
+        options = attr.get("options") or []
+        if not options:
+            continue
+        sizes = [str(o["label"]) for o in options if o.get("label")]
+        prices = [
+            _money(config["optionPrices"][pid]["finalPrice"]["amount"])
+            for o in options
+            for pid in o.get("products", [])
+            if pid in config.get("optionPrices", {})
+        ]
+        prices = [p for p in prices if p is not None]
+        return sizes, (min(prices) if prices else None)
+    return [], None
+
+
 def parse_product(html: str, url: str, category_id: int | None = None) -> dict:
     tree = HTMLParser(html)
-    result: dict = {}
-
-    match = PRODUCT_URL_RE.search(url)
-    if match:
-        result["id"] = int(match.group(1))
-        result["slug"] = match.group(2)
-    else:
+    parsed = parse_product_url(url)
+    if not parsed:
         raise ValueError(f"Cannot extract product id from url: {url}")
+    result: dict = {"id": parsed[0], "slug": parsed[1], "url": url, "currency": "BRL"}
 
-    result["url"] = url
+    ld = _json_ld(tree, "Product") or {}
+    offer = ld.get("offers") or {}
+    if isinstance(offer, list):
+        offer = offer[0] if offer else {}
 
     name_node = tree.css_first("h1")
-    result["name"] = _extract_text(name_node) if name_node else "Unknown Product"
+    result["name"] = _extract_text(name_node) or ld.get("name") or "Unknown Product"
+    result["codigo"] = (str(ld["sku"])[:64] if ld.get("sku") else None) or _extract_text(
+        tree.css_first(".product.attribute.sku .value")
+    ) or None
 
-    codigo = None
-    code_node = tree.css_first(".sku, .codigo, [class*='codigo'], [class*='sku']")
-    if code_node:
-        codigo = _extract_text(code_node)
-    if not codigo:
-        m = CODE_RE.search(html)
-        if m:
-            codigo = m.group(0)
-    result["codigo"] = codigo
+    brand = ld.get("brand")
+    result["brand"] = (brand.get("name") if isinstance(brand, dict) else brand) or None
 
-    result["currency"] = "BRL"
+    sizes, size_price = _sizes_and_price(_find_options_config(tree))
+    result["sizes"] = sizes
 
-    price = None
-    price_selectors = [
-        ".preco", ".price", "[class*='preco']", "[class*='price']",
-        "strong[class*='por']", "[class*='por-preco']",
-    ]
-    for sel in price_selectors:
-        node = tree.css_first(sel)
-        if node:
-            text = _extract_text(node)
-            price = _parse_price(text)
-            if price:
-                break
-    if not price:
-        por_m = re.search(r"Por:\s*R\$\s*([\d.]+,\d{2})", html)
-        if por_m:
-            raw = por_m.group(1).replace(".", "").replace(",", ".")
-            try:
-                price = Decimal(raw)
-            except InvalidOperation:
-                price = None
+    price = size_price or _money(offer.get("price"))
+    if price is None:
+        node = tree.css_first("[data-price-amount]")
+        price = _money(node.attributes.get("data-price-amount")) if node else None
     result["price"] = price
 
+    # Cash-payment discount ("R$ x à vista (-5%)"); recomputed from the price we actually keep.
     price_boleto = None
-    boleto_m = re.search(
-        r"(?:boleto|transferência)[^R$]*R\$\s*([\d.]+,\d{2})", html, re.IGNORECASE
-    )
-    if boleto_m:
-        raw = boleto_m.group(1).replace(".", "").replace(",", ".")
-        try:
-            price_boleto = Decimal(raw)
-        except InvalidOperation:
-            price_boleto = None
+    pct = tree.css_first(".promocao-preco-avista .percent-desconto")
+    pct_m = PERCENT_RE.search(_extract_text(pct)) if pct else None
+    if price is not None and pct_m:
+        price_boleto = (price * (Decimal(100) - Decimal(pct_m.group(1))) / Decimal(100)).quantize(
+            CENT, rounding=ROUND_HALF_UP
+        )
     result["price_boleto"] = price_boleto
 
     installments = None
-    inst_m = re.search(
-        r"em\s+(\d+)x[^R$]*R\$\s*([\d.]+,\d{2})",
-        html,
-        re.IGNORECASE,
-    )
-    if inst_m:
-        count = int(inst_m.group(1))
-        val_raw = inst_m.group(2).replace(".", "").replace(",", ".")
-        try:
-            value = Decimal(val_raw)
-            after = html[inst_m.end():inst_m.end() + 60]
-            interest_free = "sem juros" in after.lower()
-            installments = Installments(
-                count=count, value=value, interest_free=interest_free
-            )
-        except InvalidOperation:
-            installments = None
-    result["installments"] = installments.model_dump() if installments else None
-
-    sizes: list[str] = []
-    size_selectors = [
-        ".product-options li a", ".product-options a", ".product-options li",
-        "button.tamanho", "button.size",
-        "button[class*='tamanho']", "button[class*='size']",
-        "a.tamanho", "a.size",
-        "a[class*='tamanho']", "a[class*='size']",
-        "span.tamanho", "span.size",
-        "li.tamanho", "li.size",
-    ]
-    seen_sizes: set[str] = set()
-    has_size_options = False
-    has_available_size = False
-
-    for sel in size_selectors:
-        nodes = tree.css(sel)
-        if nodes:
-            has_size_options = True
-            for node in nodes:
-                text = _extract_text(node)
-                if text and len(text) <= 10 and text not in seen_sizes:
-                    sizes.append(text)
-                    seen_sizes.add(text)
-                    classes = node.attributes.get("class", "").lower()
-                    if not any(dis in classes for dis in ["unavailable", "indisponivel", "out", "disabled"]):
-                        has_available_size = True
-
-    if has_size_options:
-        available = has_available_size
-    else:
-        buy_btn = tree.css_first("input[value*='Comprar'], button[value*='Comprar'], .comprar, form[action*='carrinho']")
-        out_indicator = tree.css_first(".indisponivel, .esgotado, [class*='esgotado'], [class*='indisponivel']")
-        available = bool(buy_btn and not out_indicator)
-
-    result["sizes"] = sizes
-    result["available"] = available
-
-    description = ""
-    desc_selectors = [
-        ".descricao", ".description", "[class*='descricao']",
-        "[class*='description']", "#descricao", "#informacoes",
-    ]
-    for sel in desc_selectors:
-        node = tree.css_first(sel)
-        if node:
-            description = _extract_text(node)
-            if description:
-                break
-    if not description:
-        info_m = re.search(
-            r"Informações?\s+do\s+Produto[^<]*<[^>]*>(.*?)</",
-            html,
-            re.IGNORECASE | re.DOTALL,
+    count_node = tree.css_first(".parcela .num-parcela")
+    count_m = re.search(r"(\d+)", _extract_text(count_node)) if count_node else None
+    if price is not None and count_m and int(count_m.group(1)) > 1:
+        count = int(count_m.group(1))
+        value = (price / count).quantize(CENT, rounding=ROUND_HALF_UP)
+        installments = Installments(
+            count=count,
+            value=value,
+            interest_free="sem juros" in _extract_text(tree.css_first(".parcela")).lower(),
         )
-        if info_m:
-            description = re.sub(r"<[^>]+>", " ", info_m.group(1)).strip()
-    result["description"] = description
+    # Stored in a JSON column, which cannot hold Decimal: keep the value as a plain number.
+    result["installments"] = (
+        {"count": installments.count, "value": float(installments.value), "interest_free": installments.interest_free}
+        if installments
+        else None
+    )
+
+    out_of_stock = tree.css_first(".stock.unavailable") is not None
+    in_stock_schema = "instock" in str(offer.get("availability", "")).lower()
+    result["available"] = (bool(sizes) or in_stock_schema) and not out_of_stock
+
+    description = ld.get("description") or ""
+    if not description:
+        description = _extract_text(tree.css_first(".product.attribute.description .value"))
+    result["description"] = re.sub(r"\s+", " ", description).strip()
 
     images: list[str] = []
-    for node in tree.css("img[src]"):
-        src = node.attributes.get("src", "")
-        if not src:
-            continue
-        if src.startswith("//"):
-            src = "https:" + src
-        if any(k in src.lower() for k in ["produto", "product", "catalog"]):
-            images.append(src)
-    if not images:
-        for node in tree.css("img"):
-            src = node.attributes.get("src") or node.attributes.get("data-src") or ""
-            if src:
-                if src.startswith("//"):
-                    src = "https:" + src
-                if src.startswith("http"):
-                    images.append(src)
-    # Keep only plain http(s) image URLs (drops javascript:/data: and IP literals).
-    result["images"] = [u for u in dict.fromkeys(images) if safe_http_url(u)]
+    for item in _find_gallery(tree):
+        if item.get("type", "image") == "image":
+            images.append(item.get("full") or item.get("img") or "")
+    if not images and ld.get("image"):
+        images.append(ld["image"] if isinstance(ld["image"], str) else ld["image"][0])
+    # Keep only plain http(s) image URLs on safe hosts (drops javascript:/data: and IP literals).
+    result["images"] = [u for u in dict.fromkeys(images) if u and safe_http_url(u)]
 
     result["category_id"] = category_id
 
-    breadcrumbs: list[str] = []
-    crumb_selectors = [".breadcrumb", "nav[aria-label*='breadcrumb']", "[class*='breadcrumb']"]
-    for sel in crumb_selectors:
-        node = tree.css_first(sel)
-        if node:
-            for a in node.css("a, span, li"):
-                text = _extract_text(a)
-                if text:
-                    breadcrumbs.append(text)
-            break
-    result["breadcrumbs"] = breadcrumbs
+    crumbs = _json_ld(tree, "BreadcrumbList") or {}
+    names = [
+        (e.get("item") or {}).get("name", "")
+        for e in sorted(crumbs.get("itemListElement", []), key=lambda e: e.get("position", 0))
+    ]
+    # Drop "Início" (home) and the last entry, which is the product itself.
+    result["breadcrumbs"] = [n for n in names[1:-1] if n]
 
     result["scraped_at"] = datetime.now(UTC)
-    result["status"] = ProductStatus.ACTIVE if available else ProductStatus.OUT_OF_STOCK
-
+    result["status"] = ProductStatus.ACTIVE if result["available"] else ProductStatus.OUT_OF_STOCK
     return result
 
 
@@ -244,10 +258,8 @@ async def fetch_and_parse_product(
 
 
 def _extract_id(url: str) -> int | None:
-    match = PRODUCT_URL_RE.search(url)
-    if match:
-        return int(match.group(1))
-    return None
+    parsed = parse_product_url(url)
+    return parsed[0] if parsed else None
 
 
 def infer_brand(name: str, codigo: str | None) -> str | None:

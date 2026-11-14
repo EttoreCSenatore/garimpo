@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
     # Exact hostnames the image proxy may fetch from (no wildcards, no IPs).
-    image_proxy_allowed_hosts: str = "estatico.tivollisports.com.br,www.tivolli.com.br"
+    image_proxy_allowed_hosts: str = "www.tivolli.com.br"
     image_proxy_max_bytes: int = 5 * 1024 * 1024
 
     # Simple per-client sliding-window limits (requests per minute). 0 disables.
@@ -70,7 +70,21 @@ class Settings(BaseSettings):
 
     @property
     def robots_disallowed(self) -> list[str]:
-        return ["/tivadm43", "/homologacao"]
+        # Mirrors the store's robots.txt (Magento) plus the paths blocked since the old platform.
+        return [
+            "/admin", "/app", "/downloader", "/errors", "/includes", "/lib", "/pkginfo", "/shell",
+            "/var", "/checkout", "/onestepcheckout", "/customer", "/wishlist", "/sendfriend",
+            "/review", "/index.php", "/catalogsearch", "/catalog/product_compare",
+            "/catalog/category/view", "/catalog/product/view", "/cgi-bin", "/tivadm43", "/homologacao",
+        ]
+
+    @property
+    def robots_disallowed_params(self) -> set[str]:
+        """Query parameters robots.txt forbids on listings (sorting, view modes, filters, sessions)."""
+        return {
+            "product_list_order", "product_list_dir", "product_list_mode", "product_list_limit",
+            "dir", "limit", "mode", "price", "manufacturer", "color", "tamanho", "sid",
+        }
 
     @property
     def cors_origin_list(self) -> list[str]:

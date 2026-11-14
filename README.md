@@ -20,7 +20,7 @@ It is a rate-limited catalog scraper, FastAPI REST API and conversational search
 
 ## Features
 
-- **Scraper**: categories from `sitemap.xml`, paginated listings (`/c/{id}-{slug}?p=N`), product pages (price, boleto price, installments, sizes, stock, images, breadcrumbs)
+- **Scraper**: categories from `google_sitemap.xml`, paginated listings (`/{category}?p=N`), product pages on the store's Magento platform (JSON-LD, price, cash price, installments, sizes, stock, full image gallery, breadcrumbs)
 - **Polite by design**: one process-wide budget of ~1 request/second with 500–1500 ms jitter and exponential back-off; same-site URLs only
 - **Freshness**: full refresh every 6 h, the 200 most viewed products every 15 min, and a background refresh when a product older than 5 min is viewed
 - **REST API**: FastAPI with OpenAPI docs, cursor pagination, filters, price history and HTTP cache headers

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import re
+import zlib
 from datetime import UTC, datetime
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import structlog
 from lxml import etree
@@ -15,11 +16,30 @@ from app.scraper.listings import _same_site_url
 
 logger = structlog.get_logger()
 
-CATEGORY_URL_RE = re.compile(r"/c/(\d+)-([\w-]+)")
+# Category pages in the sitemap: the store's department roots and everything below them.
+# CMS pages (sobre-nos, marcas, politicas...) and the home page are not categories.
+CATEGORY_ROOTS = {"homens", "mulheres", "infantil", "esportes", "roupas", "tenis"}
+CATEGORY_PATH_RE = re.compile(r"^/((?:cat-[a-z0-9-]+)|(?:[a-z0-9-]+(?:/[a-z0-9-]+)*))/?$")
+
+
+def category_id_for(path: str) -> int:
+    """Stable positive id for a category path (the new store exposes no numeric category id)."""
+    return zlib.crc32(path.strip("/").encode()) & 0x7FFFFFFF
+
+
+def category_path(url: str) -> str | None:
+    path = urlparse(url).path
+    match = CATEGORY_PATH_RE.match(path)
+    if not match:
+        return None
+    path = match.group(1)
+    if path.split("/")[0] not in CATEGORY_ROOTS and not path.startswith("cat-"):
+        return None
+    return path
 
 
 async def fetch_categories(client: RateLimitedClient) -> list[Category]:
-    sitemap_url = urljoin(settings.base_url, "/sitemap.xml")
+    sitemap_url = urljoin(settings.base_url, "/google_sitemap.xml")
     resp = await client.get_raw(sitemap_url)
     resp.raise_for_status()
 
@@ -37,24 +57,24 @@ async def fetch_categories(client: RateLimitedClient) -> list[Category]:
 
     for url in urls:
         url = _same_site_url(str(url))
-        if not url:
+        path = category_path(url) if url else None
+        if not path:
             continue
-        match = CATEGORY_URL_RE.search(url)
-        if not match:
-            continue
-        cat_id = int(match.group(1))
+        cat_id = category_id_for(path)
         if cat_id in seen_ids:
             continue
         seen_ids.add(cat_id)
-        slug = match.group(2)
         categories.append(
             Category(
                 id=cat_id,
-                slug=slug,
+                slug=path,
                 url=url,
-                name=slug.replace("-", " ").title(),
+                name=path.rsplit("/", 1)[-1].removeprefix("cat-").replace("-", " ").title(),
             )
         )
+
+    # Most specific categories first, so a product is filed under its leaf category.
+    categories.sort(key=lambda c: -c.slug.count("/"))
 
     logger.info("scraper.categories.fetched", count=len(categories))
     return categories
