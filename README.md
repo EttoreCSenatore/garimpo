@@ -24,6 +24,7 @@ It is a rate-limited catalog scraper, FastAPI REST API and conversational search
 - **Polite by design**: one process-wide budget of ~1 request/second with 500–1500 ms jitter and exponential back-off; same-site URLs only
 - **Freshness**: full refresh every 6 h, the 200 most viewed products every 15 min, and a background refresh when a product older than 5 min is viewed
 - **REST API**: FastAPI with OpenAPI docs, cursor pagination, filters, price history and HTTP cache headers
+- **Full-text search**: SQLite FTS5 over name, brand, category and slug; accent- and order-insensitive, prefix matching, BM25 ranking
 - **Chat search**: a rule-based intent parser (Portuguese and English, no LLM or API keys) that asks for gender and shoe size when needed
 - **Splunk HEC**: batched events with retries and an on-disk buffer while Splunk is unreachable
 - **Secure defaults**: SSRF-safe image proxy, admin token required in production, strict CORS, rate limits, non-root read-only container
@@ -145,7 +146,7 @@ app/
   splunk_hec.py      Splunk HEC client with on-disk buffer
   seed.py            Demo data (python -m app.seed)
   scraper/           Rate-limited client, categories, listings, product parser
-  search/            Intent parser for the chat
+  search/            Intent parser for the chat, FTS5 index and ranking
   api/               Routes and dependencies
 frontend/            React + Vite + TypeScript + Tailwind chat UI
 tests/               pytest suite (HTTP mocked, temporary database, no network)

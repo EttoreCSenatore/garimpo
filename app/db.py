@@ -19,6 +19,9 @@ def init_db() -> None:
     _enable_wal()
     _ensure_indexes()
     _close_stale_runs()
+    from app.search.fts import ensure_search_index
+
+    ensure_search_index(engine)
 
 
 def _enable_wal() -> None:

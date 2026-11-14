@@ -19,7 +19,7 @@ Para reportar uma vulnerabilidade, use o formulário privado de advisories do re
 | **XSS** | As respostas do chat são renderizadas como nós React, não como HTML; URLs de produto e de imagem precisam ser `http(s)`. |
 | **Dados de origem maliciosos** | Links coletados precisam ser `http(s)` do mesmo site; `javascript:` e hosts externos são descartados. O sitemap é lido com entidades, DTDs e acesso à rede desativados. |
 | **Abuso e DoS** | Limites de taxa por cliente, sessões de chat limitadas, limites de tamanho, um rastreador por vez, atualizações em andamento limitadas. |
-| **Injeção** | ORM com parâmetros vinculados; o texto do usuário usado em `LIKE` é escapado. |
+| **Injeção** | ORM com parâmetros vinculados; o texto do usuário usado em `LIKE` é escapado, e as buscas de texto completo são remontadas só com palavras (entre aspas, como parâmetro), então operadores do FTS5 digitados pelo usuário não têm efeito. |
 | **Segredos** | `.env`, bancos e buffers estão no `.gitignore`; secret scanning e push protection estão ativos no repositório. |
 | **Cadeia de suprimentos** | Dependabot, `pip-audit` e `npm audit` no CI, CodeQL em cada pull request. |
 | **Contêiner** | Sem root, sistema de arquivos somente leitura, sem capabilities, porta presa ao loopback. |

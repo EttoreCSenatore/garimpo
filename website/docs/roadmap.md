@@ -17,7 +17,6 @@ These are the remaining ideas, roughly by value.
 ## Performance and scale
 
 - **Async database access**: the SQLite calls run synchronously inside async handlers; move heavy queries to a thread pool or adopt an async driver.
-- **Full-text search**: SQLite FTS5 for `q` and chat instead of `LIKE '%term%'`.
 - **PostgreSQL option**: documented migration path and Alembic migrations (currently `create_all` plus idempotent indexes).
 - **Shared rate limiting**: move limits and chat sessions to Redis if more than one instance is needed.
 

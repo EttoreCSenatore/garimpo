@@ -22,7 +22,7 @@ Para calçados e vestuário, o assistente pergunta o que falta antes de pesquisa
 
 1. **Gênero**: *masculino*, *feminino*, *infantil* ou *tanto faz*.
 2. **Número do calçado** (apenas calçados): um número como `38`, ou *tanto faz*.
-3. **Resultados**: até 24 produtos ordenados por popularidade. Se nada corresponder, o número e depois os termos extras são relaxados, e a resposta avisa.
+3. **Resultados**: até 24 produtos, a melhor correspondência de texto primeiro (BM25 em nome, marca, categoria e slug; acertar o nome vale mais), depois por popularidade. Se nada corresponder, o número e depois os termos extras são relaxados, e a resposta avisa.
 
 Buscas neutras (bolas, raquetes, acessórios) não recebem perguntas.
 

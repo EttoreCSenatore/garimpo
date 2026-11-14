@@ -17,6 +17,7 @@ from sqlmodel import Session, String, and_, cast, func, or_, select
 from app.api.dependencies import get_db, get_splunk, require_admin
 from app.config import settings
 from app.models import Category, Product, ProductHistory, ProductStatus, ScrapeRun
+from app.search.fts import fts_available, match_all, match_any, ranked_matches
 from app.search.intent_parser import ParsedIntent, parse_intent
 from app.security import chat_rate_limit, image_rate_limit, resolve_allowed_url
 from app.splunk_hec import SplunkHECLogger
@@ -155,9 +156,16 @@ async def list_products(
         statement = statement.where(Product.available == available)
         count_stmt = count_stmt.where(Product.available == available)
     if q:
-        like = _like(q)
-        statement = statement.where(Product.name.ilike(like, escape="\\"))
-        count_stmt = count_stmt.where(Product.name.ilike(like, escape="\\"))
+        fts_query = match_all(q) if fts_available(db) else None
+        if fts_query:
+            # Full-text: accent/case-insensitive, any word order, name/brand/category/description.
+            matching = select(ranked_matches(fts_query).c.id)
+            statement = statement.where(Product.id.in_(matching))
+            count_stmt = count_stmt.where(Product.id.in_(matching))
+        else:
+            like = _like(q)
+            statement = statement.where(Product.name.ilike(like, escape="\\"))
+            count_stmt = count_stmt.where(Product.name.ilike(like, escape="\\"))
 
     total = db.exec(count_stmt).one()
 
@@ -664,24 +672,35 @@ async def chat(
         # Nada reconhecido: as palavras da mensagem viram os termos de busca
         search_terms = free_terms
         extra_terms = []
+    use_fts = fts_available(db)
+    rank_parts: list = []  # BM25 scores to sum for ordering (lower is better)
     if search_terms:
-        category_conditions = []
-        for kw in search_terms:
-            like_kw = f"%{kw}%"
-            category_conditions.append(cast(Product.breadcrumbs, String).ilike(like_kw))
-            category_conditions.append(Product.name.ilike(like_kw))
-            category_conditions.append(Product.slug.ilike(like_kw))
-
-        # Also try matching category via joined Category slug
+        # Also match products by their category slug (ex.: "chuteiras-society").
         cat_ids = db.exec(
             select(Category.id).where(
-                or_(*[Category.slug.ilike(f"%{s}%") for s in search_terms])
+                or_(*[Category.slug.ilike(_like(s), escape="\\") for s in search_terms])
             )
         ).all()
-        if cat_ids:
-            category_conditions.append(Product.category_id.in_(cat_ids))
-
-        if category_conditions:
+        category_match = match_any(search_terms) if use_fts else None
+        if category_match:
+            fts = ranked_matches(category_match, "fts_terms")
+            if cat_ids:
+                statement = statement.outerjoin(fts, fts.c.id == Product.id).where(
+                    or_(fts.c.id.is_not(None), Product.category_id.in_(cat_ids))
+                )
+                rank_parts.append(func.coalesce(fts.c.rank, 0.0))
+            else:
+                statement = statement.join(fts, fts.c.id == Product.id)
+                rank_parts.append(fts.c.rank)
+        else:
+            category_conditions = []
+            for kw in search_terms:
+                like_kw = _like(kw)
+                category_conditions.append(cast(Product.breadcrumbs, String).ilike(like_kw, escape="\\"))
+                category_conditions.append(Product.name.ilike(like_kw, escape="\\"))
+                category_conditions.append(Product.slug.ilike(like_kw, escape="\\"))
+            if cat_ids:
+                category_conditions.append(Product.category_id.in_(cat_ids))
             statement = statement.where(or_(*category_conditions))
 
     # --- Brand filter ------------------------------------------------------
@@ -711,30 +730,39 @@ async def chat(
 
     # Termos livres (ex.: time) estreitam a busca com um AND; se nada
     # sobrar, a busca é refeita sem eles lá embaixo.
+    base_rank_parts = list(rank_parts)
     if extra_terms:
-        extra_conditions = []
-        for term in extra_terms:
-            like = f"%{term}%"
-            extra_conditions.append(Product.name.ilike(like))
-            extra_conditions.append(Product.slug.ilike(like))
-            extra_conditions.append(cast(Product.breadcrumbs, String).ilike(like))
-        statement = statement.where(or_(*extra_conditions))
+        extra_match = match_any(extra_terms) if use_fts else None
+        if extra_match:
+            fts_extra = ranked_matches(extra_match, "fts_extra")
+            statement = statement.join(fts_extra, fts_extra.c.id == Product.id)
+            rank_parts.append(fts_extra.c.rank)
+        else:
+            extra_conditions = []
+            for term in extra_terms:
+                like = _like(term)
+                extra_conditions.append(Product.name.ilike(like, escape="\\"))
+                extra_conditions.append(Product.slug.ilike(like, escape="\\"))
+                extra_conditions.append(cast(Product.breadcrumbs, String).ilike(like, escape="\\"))
+            statement = statement.where(or_(*extra_conditions))
+
+    def _ordered(stmt, parts: list):
+        # Best text match first (summed BM25), then the most viewed products.
+        relevance = [sum(parts[1:], parts[0])] if parts else []
+        return stmt.order_by(*relevance, Product.view_count.desc()).limit(24)
 
     # Limit results returned to the chat
-    statement = statement.order_by(Product.view_count.desc()).limit(24)
-    products = db.exec(statement).all()
+    products = db.exec(_ordered(statement, rank_parts)).all()
 
     # Sem resultados: relaxa primeiro os termos extras, depois o número
     terms_relaxed = False
     size_relaxed = False
     if not products and extra_terms:
         terms_relaxed = True
-        relaxed = base_statement.order_by(Product.view_count.desc()).limit(24)
-        products = db.exec(relaxed).all()
+        products = db.exec(_ordered(base_statement, base_rank_parts)).all()
     if not products and prefs.get("size") and intent.is_footwear_search:
         size_relaxed = True
-        relaxed = base_statement.order_by(Product.view_count.desc()).limit(24)
-        products = db.exec(relaxed).all()
+        products = db.exec(_ordered(base_statement, base_rank_parts)).all()
 
     # --- Build conversational reply ---------------------------------------
     count = len(products)

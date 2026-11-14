@@ -22,7 +22,7 @@ For footwear and clothing the bot asks for what is missing before searching, and
 
 1. **Gender**: *masculino*, *feminino*, *infantil* or *tanto faz* (don't care).
 2. **Shoe size** (footwear only): a number such as `38`, or *tanto faz*.
-3. **Results**: up to 24 products ordered by popularity. If nothing matches, the size and then extra terms are relaxed, and the reply says so.
+3. **Results**: up to 24 products, best text match first (BM25 over name, brand, category and slug; a hit in the name counts most), then by popularity. If nothing matches, the size and then extra terms are relaxed, and the reply says so.
 
 Neutral searches (balls, rackets, accessories) get no questions.
 

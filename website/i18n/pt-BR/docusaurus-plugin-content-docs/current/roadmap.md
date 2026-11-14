@@ -17,7 +17,6 @@ Estas são as ideias restantes, aproximadamente por valor.
 ## Desempenho e escala
 
 - **Acesso assíncrono ao banco**: as chamadas ao SQLite rodam de forma síncrona dentro de handlers assíncronos; mova consultas pesadas para um pool de threads ou adote um driver assíncrono.
-- **Busca de texto completo**: SQLite FTS5 para `q` e para o chat, no lugar de `LIKE '%termo%'`.
 - **Opção PostgreSQL**: caminho de migração documentado e migrações com Alembic (hoje `create_all` mais índices idempotentes).
 - **Limites compartilhados**: mover limites e sessões de chat para o Redis se for necessário mais de uma instância.
 
