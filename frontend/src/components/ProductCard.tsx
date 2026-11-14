@@ -14,15 +14,24 @@ function formatPrice(value: number | null | undefined): string {
   }).format(value)
 }
 
+/** Returns the URL only if it is plain http(s); blocks javascript:, data: and other schemes. */
+function safeHttpUrl(url?: string | null): string | undefined {
+  if (!url) return undefined
+  try {
+    const parsed = new URL(url, window.location.origin)
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:' ? parsed.href : undefined
+  } catch {
+    return undefined
+  }
+}
+
 function getImageUrl(url?: string | null): string | undefined {
   if (!url) return undefined
-  if (url.startsWith('//')) {
-    return `/api/image-proxy?url=${encodeURIComponent('https:' + url)}`
-  }
-  if (url.includes('tivollisports.com.br') || url.includes('tivolli.com.br')) {
-    return `/api/image-proxy?url=${encodeURIComponent(url)}`
-  }
-  return url
+  const absolute = safeHttpUrl(url.startsWith('//') ? `https:${url}` : url)
+  if (!absolute) return undefined
+  const host = new URL(absolute).hostname
+  const isShopHost = /(^|\.)(tivolli\.com\.br|tivollisports\.com\.br)$/.test(host)
+  return isShopHost ? `/api/image-proxy?url=${encodeURIComponent(absolute)}` : absolute
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
@@ -30,10 +39,11 @@ export default function ProductCard({ product }: ProductCardProps) {
   const mainImage = product.images?.[0]
   const displayImage = getImageUrl(mainImage)
   const isAvailable = product.available && product.status === 'active'
+  const productUrl = safeHttpUrl(product.url)
 
   return (
     <a
-      href={product.url}
+      href={productUrl}
       target="_blank"
       rel="noopener noreferrer"
       className="group flex flex-col bg-white rounded-2xl border border-slate-100 overflow-hidden

@@ -2,21 +2,26 @@ from __future__ import annotations
 
 import re
 import time
-from datetime import datetime, timedelta, timezone
+from collections import OrderedDict
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from typing import Optional
+from urllib.parse import urljoin
 from uuid import uuid4
 
+import httpx
 from cachetools import TTLCache
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from pydantic import BaseModel
-from sqlmodel import Session, and_, func, or_, select, cast, String
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from pydantic import BaseModel, Field
+from sqlalchemy import update
+from sqlmodel import Session, String, and_, cast, func, or_, select
 
 from app.api.dependencies import get_db, get_splunk, require_admin
 from app.config import settings
 from app.models import Category, Product, ProductHistory, ProductStatus, ScrapeRun
 from app.search.intent_parser import ParsedIntent, parse_intent
+from app.security import chat_rate_limit, image_rate_limit, safe_http_url
 from app.splunk_hec import SplunkHECLogger
+from app.state import MAX_INFLIGHT_SINGLE, active_workers, inflight_single, spawn
 
 router = APIRouter()
 
@@ -26,8 +31,8 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 class ChatRequest(BaseModel):
-    message: str
-    session_id: Optional[str] = None
+    message: str = Field(min_length=1, max_length=settings.chat_max_message_length)
+    session_id: str | None = Field(default=None, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
 
 
 class ChatResponse(BaseModel):
@@ -36,12 +41,11 @@ class ChatResponse(BaseModel):
     products: list[dict]
 
 hot_product_cache: TTLCache = TTLCache(maxsize=settings.hot_product_cache_size, ttl=60)
-active_workers: dict[str, int] = {"full": 0, "incremental": 0, "single": 0}
 
 # Estado das sessões de chat para o fluxo de compra guiado (em memória, por
 # session_id). Guarda preferências pessoais (gênero, número do calçado) que
 # persistem entre as mensagens da mesma conversa.
-chat_sessions: dict[str, dict] = {}
+chat_sessions: OrderedDict[str, dict] = OrderedDict()
 SESSION_TTL_SECONDS = 900
 
 
@@ -50,18 +54,18 @@ class ProductResponse(BaseModel):
     slug: str
     url: str
     name: str
-    codigo: Optional[str] = None
+    codigo: str | None = None
     currency: str
-    price: Optional[Decimal] = None
-    price_boleto: Optional[Decimal] = None
-    installments: Optional[dict] = None
+    price: Decimal | None = None
+    price_boleto: Decimal | None = None
+    installments: dict | None = None
     sizes: list[str] = []
     available: bool
-    description: Optional[str] = None
+    description: str | None = None
     images: list[str] = []
-    category_id: Optional[int] = None
+    category_id: int | None = None
     breadcrumbs: list[str] = []
-    brand: Optional[str] = None
+    brand: str | None = None
     status: ProductStatus
     scraped_at: datetime
 
@@ -70,18 +74,29 @@ class CategoryResponse(BaseModel):
     id: int
     slug: str
     url: str
-    name: Optional[str] = None
+    name: str | None = None
     product_count: int
 
 
 class PaginatedResponse(BaseModel):
     items: list
-    next_cursor: Optional[str] = None
-    total: Optional[int] = None
+    next_cursor: str | None = None
+    total: int | None = None
+
+
+def _like(term: str) -> str:
+    """Escape LIKE wildcards so user input is matched literally (use with escape="\\")."""
+    escaped = term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{escaped}%"
 
 
 def _cache_headers() -> dict[str, str]:
     return {"Cache-Control": f"public, max-age={settings.cache_ttl_seconds}"}
+
+
+def _as_utc(value: datetime) -> datetime:
+    """SQLite returns naive datetimes; treat them as UTC."""
+    return value if value.tzinfo else value.replace(tzinfo=UTC)
 
 
 def _apply_disclaimer(product: dict) -> dict:
@@ -106,20 +121,20 @@ async def health_check(db: Session = Depends(get_db)):
         "service": "tivolli-scraper",
         "version": "1.0.0",
         "last_refresh": last_run.completed_at.isoformat() if last_run and last_run.completed_at else None,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
     }
 
 
 @router.get("/products", tags=["products"])
 async def list_products(
     response: Response,
-    category_id: Optional[int] = None,
-    brand: Optional[str] = None,
-    min_price: Optional[Decimal] = None,
-    max_price: Optional[Decimal] = None,
-    available: Optional[bool] = None,
-    q: Optional[str] = None,
-    cursor: Optional[int] = None,
+    category_id: int | None = None,
+    brand: str | None = None,
+    min_price: Decimal | None = None,
+    max_price: Decimal | None = None,
+    available: bool | None = None,
+    q: str | None = Query(default=None, max_length=100),
+    cursor: int | None = None,
     limit: int = Query(default=50, ge=1, le=200),
     db: Session = Depends(get_db),
 ):
@@ -142,9 +157,9 @@ async def list_products(
         statement = statement.where(Product.available == available)
         count_stmt = count_stmt.where(Product.available == available)
     if q:
-        like = f"%{q}%"
-        statement = statement.where(Product.name.ilike(like))
-        count_stmt = count_stmt.where(Product.name.ilike(like))
+        like = _like(q)
+        statement = statement.where(Product.name.ilike(like, escape="\\"))
+        count_stmt = count_stmt.where(Product.name.ilike(like, escape="\\"))
 
     total = db.exec(count_stmt).one()
 
@@ -170,31 +185,27 @@ async def get_product(
     db: Session = Depends(get_db),
     splunk: SplunkHECLogger = Depends(get_splunk),
 ):
-    cached = hot_product_cache.get(product_id)
     product = db.get(Product, product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Produto não encontrado")
 
-    product.view_count += 1
-    db.add(product)
+    # Atomic increment (no read-modify-write race between concurrent requests).
+    db.execute(update(Product).where(Product.id == product_id).values(view_count=Product.view_count + 1))
     db.commit()
     db.refresh(product)
 
-    if cached and (datetime.now(timezone.utc) - cached["scraped_at"]).total_seconds() < 300:
-        response.headers.update(_cache_headers())
-        return _apply_disclaimer(cached)
+    stale = (
+        product.scraped_at is not None
+        and (datetime.now(UTC) - _as_utc(product.scraped_at)).total_seconds() > 300
+    )
+    if stale and product_id not in inflight_single and len(inflight_single) < MAX_INFLIGHT_SINGLE:
+        from app.tasks import refresh_single_product_async
+
+        inflight_single.add(product_id)
+        spawn(refresh_single_product_async(product_id))
 
     data = product.model_dump()
     hot_product_cache[product_id] = data
-
-    if product.scraped_at and (datetime.now(timezone.utc) - product.scraped_at).total_seconds() > 300:
-        try:
-            from app.tasks import refresh_single_product_async
-            import asyncio
-            asyncio.create_task(refresh_single_product_async(product_id))
-        except Exception:
-            pass
-
     response.headers.update(_cache_headers())
     return _apply_disclaimer(data)
 
@@ -247,7 +258,7 @@ async def get_stats(response: Response, db: Session = Depends(get_db)):
         select(func.count(Product.id)).where(Product.status == ProductStatus.ACTIVE)
     ).one()
 
-    since = datetime.now(timezone.utc) - timedelta(hours=24)
+    since = datetime.now(UTC) - timedelta(hours=24)
     runs_24h = db.exec(
         select(ScrapeRun).where(ScrapeRun.started_at >= since)
     ).all()
@@ -285,8 +296,8 @@ async def trigger_full_refresh(
     splunk: SplunkHECLogger = Depends(get_splunk),
 ):
     from app.tasks import run_full_refresh_async
-    import asyncio
-    asyncio.create_task(run_full_refresh_async())
+
+    spawn(run_full_refresh_async())
     await splunk.send({"event_type": "tivolli.run.manual_trigger", "run_type": "full"})
     return {"status": "started", "message": "Atualização completa iniciada"}
 
@@ -298,8 +309,10 @@ async def refresh_single_product(
     splunk: SplunkHECLogger = Depends(get_splunk),
 ):
     from app.tasks import refresh_single_product_async
-    import asyncio
-    asyncio.create_task(refresh_single_product_async(product_id))
+
+    if product_id not in inflight_single:
+        inflight_single.add(product_id)
+        spawn(refresh_single_product_async(product_id))
     await splunk.send(
         {"event_type": "tivolli.run.manual_trigger", "run_type": "single", "product_id": product_id}
     )
@@ -317,28 +330,72 @@ async def get_queue_status(_: str = Depends(require_admin)):
     }
 
 
-@router.get("/api/image-proxy", tags=["products"])
-async def proxy_image(url: str):
+_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"}
+_MAX_REDIRECTS = 3
+
+
+def _sniff_image_type(head: bytes) -> str | None:
+    if head.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if head.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if head[:4] == b"GIF8":
+        return "image/gif"
+    if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
+        return "image/webp"
+    return None
+
+
+@router.get("/api/image-proxy", tags=["products"], dependencies=[Depends(image_rate_limit)])
+async def proxy_image(url: str = Query(..., max_length=2048)):
+    """Proxy a product image from an allow-listed shop host.
+
+    Hardened against SSRF: https/http only, allow-listed hosts (no IP literals),
+    every redirect hop re-validated, response size capped, and only raster image
+    types are returned (no SVG/HTML).
     """
-    Proxies product images to ensure correct MIME type (image/jpeg)
-    and eliminate third-party browser network errors.
-    """
-    import httpx
+    allowed = settings.image_host_list
+    current = safe_http_url(url, allowed)
+    if current is None:
+        raise HTTPException(status_code=400, detail="URL de imagem não permitida")
+
     try:
-        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
-            resp = await client.get(url)
-            if resp.status_code != 200:
-                raise HTTPException(status_code=resp.status_code, detail="Falha ao buscar imagem")
-            content_type = resp.headers.get("content-type", "")
-            if not content_type or content_type == "application/octet-stream":
-                content_type = "image/jpeg"
-            return Response(
-                content=resp.content,
-                media_type=content_type,
-                headers={"Cache-Control": "public, max-age=86400"},
-            )
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Erro no proxy: {str(e)}")
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=False) as client:
+            for _ in range(_MAX_REDIRECTS + 1):
+                async with client.stream("GET", current) as resp:
+                    if resp.is_redirect:
+                        nxt = safe_http_url(urljoin(current, resp.headers.get("location", "")), allowed)
+                        if nxt is None:
+                            raise HTTPException(status_code=502, detail="Redirecionamento não permitido")
+                        current = nxt
+                        continue
+                    if resp.status_code != 200:
+                        raise HTTPException(status_code=502, detail="Falha ao buscar imagem")
+
+                    declared = resp.headers.get("content-length")
+                    if declared and declared.isdigit() and int(declared) > settings.image_proxy_max_bytes:
+                        raise HTTPException(status_code=502, detail="Imagem muito grande")
+
+                    body = bytearray()
+                    async for chunk in resp.aiter_bytes():
+                        body.extend(chunk)
+                        if len(body) > settings.image_proxy_max_bytes:
+                            raise HTTPException(status_code=502, detail="Imagem muito grande")
+
+                    declared_type = resp.headers.get("content-type", "").split(";")[0].strip().lower()
+                    content_type = declared_type if declared_type in _IMAGE_TYPES else _sniff_image_type(bytes(body[:16]))
+                    if content_type is None:
+                        raise HTTPException(status_code=502, detail="Conteúdo não é uma imagem suportada")
+                    return Response(
+                        content=bytes(body),
+                        media_type=content_type,
+                        headers={"Cache-Control": "public, max-age=86400"},
+                    )
+            raise HTTPException(status_code=502, detail="Muitos redirecionamentos")
+    except HTTPException:
+        raise
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail="Erro ao buscar imagem") from exc
 
 
 # ---------------------------------------------------------------------------
@@ -366,15 +423,22 @@ GENDER_LABELS = {
 }
 
 
-def _get_chat_session(session_id: Optional[str]) -> dict:
+def _get_chat_session(session_id: str | None) -> dict:
     """Recupera (ou cria) a sessão de chat em memória para um session_id."""
     key = session_id or uuid4().hex
     now = time.monotonic()
+    # The dict is ordered by last use, so expired sessions are always at the front.
+    while chat_sessions and now - next(iter(chat_sessions.values()))["ts"] > SESSION_TTL_SECONDS:
+        chat_sessions.popitem(last=False)
+    # Cap the store so a flood of random session ids cannot exhaust memory.
+    while key not in chat_sessions and len(chat_sessions) >= settings.chat_max_sessions:
+        chat_sessions.popitem(last=False)
     session = chat_sessions.get(key)
     if session is None or now - session["ts"] > SESSION_TTL_SECONDS:
         session = {"prefs": {}, "declined": {}, "awaiting": None, "last_intent": None, "ts": now}
         chat_sessions[key] = session
     session["ts"] = now
+    chat_sessions.move_to_end(key)
     return session
 
 
@@ -483,7 +547,7 @@ def _free_terms(message: str, intent: ParsedIntent) -> list[str]:
     return [t for t in _content_words(message) if t not in recognized]
 
 
-@router.post("/api/chat", tags=["chat"], response_model=ChatResponse)
+@router.post("/api/chat", tags=["chat"], response_model=ChatResponse, dependencies=[Depends(chat_rate_limit)])
 async def chat(
     payload: ChatRequest,
     db: Session = Depends(get_db),

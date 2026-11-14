@@ -1,22 +1,19 @@
 from __future__ import annotations
 
-import asyncio
-from datetime import datetime, timezone
-from decimal import Decimal
-from typing import Optional
+from datetime import UTC, datetime
 
 import structlog
-from sqlmodel import Session, select
+from sqlmodel import select
 
-from app.api.routes import active_workers
 from app.config import settings
-from app.db import engine, session_scope
+from app.db import session_scope
 from app.models import Category, Product, ProductHistory, ProductStatus, ScrapeRun
 from app.scraper.categories import discover_categories
 from app.scraper.client import RateLimitedClient
 from app.scraper.listings import crawl_category
 from app.scraper.products import fetch_and_parse_product, infer_brand
 from app.splunk_hec import get_hec_logger
+from app.state import active_workers, get_run_lock, inflight_single
 
 logger = structlog.get_logger()
 
@@ -26,7 +23,7 @@ def _save_product(data: dict) -> tuple[Product, bool]:
     changed = False
     with session_scope() as session:
         existing = session.get(Product, product_id)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         if data.get("status") == ProductStatus.DISAPPEARED:
             if existing:
@@ -166,11 +163,12 @@ async def refresh_single_product_async(product_id: int) -> None:
             {"event_type": "tivolli.error.http", "product_id": product_id, "error": str(exc)}
         )
     finally:
+        inflight_single.discard(product_id)
         active_workers["single"] -= 1
         await client.close()
 
 
-async def run_full_refresh_async() -> None:
+async def _run_full_refresh() -> None:
     active_workers["full"] += 1
     client = RateLimitedClient()
     hec = get_hec_logger()
@@ -184,13 +182,13 @@ async def run_full_refresh_async() -> None:
     scraped = 0
     failed = 0
     disappeared = 0
-    start = datetime.now(timezone.utc)
+    start = datetime.now(UTC)
 
     try:
         await hec.send({"event_type": "tivolli.run.started", "run_id": run_id, "run_type": "full"})
 
         categories = await discover_categories(client)
-        all_product_urls: list[tuple[str, Optional[int]]] = []
+        all_product_urls: list[tuple[str, int | None]] = []
 
         for cat in categories:
             urls = await crawl_category(cat.id, cat.slug, client)
@@ -200,7 +198,7 @@ async def run_full_refresh_async() -> None:
                 c = session.get(Category, cat.id)
                 if c:
                     c.product_count = len(urls)
-                    c.last_seen = datetime.now(timezone.utc)
+                    c.last_seen = datetime.now(UTC)
                     session.add(c)
                     session.commit()
 
@@ -232,7 +230,7 @@ async def run_full_refresh_async() -> None:
         with session_scope() as session:
             r = session.get(ScrapeRun, run_id)
             if r:
-                r.completed_at = datetime.now(timezone.utc)
+                r.completed_at = datetime.now(UTC)
                 r.products_scraped = scraped
                 r.products_failed = failed
                 r.products_disappeared = disappeared
@@ -248,7 +246,7 @@ async def run_full_refresh_async() -> None:
                 "products_scraped": scraped,
                 "products_failed": failed,
                 "products_disappeared": disappeared,
-                "duration_seconds": (datetime.now(timezone.utc) - start).total_seconds(),
+                "duration_seconds": (datetime.now(UTC) - start).total_seconds(),
             }
         )
     except Exception as exc:
@@ -256,7 +254,7 @@ async def run_full_refresh_async() -> None:
         with session_scope() as session:
             r = session.get(ScrapeRun, run_id)
             if r:
-                r.completed_at = datetime.now(timezone.utc)
+                r.completed_at = datetime.now(UTC)
                 r.status = "failed"
                 r.error_message = str(exc)
                 session.add(r)
@@ -270,7 +268,7 @@ async def run_full_refresh_async() -> None:
         await hec.flush()
 
 
-async def run_incremental_refresh_async() -> None:
+async def _run_incremental_refresh() -> None:
     active_workers["incremental"] += 1
     client = RateLimitedClient()
     hec = get_hec_logger()
@@ -283,7 +281,7 @@ async def run_incremental_refresh_async() -> None:
 
     scraped = 0
     failed = 0
-    start = datetime.now(timezone.utc)
+    start = datetime.now(UTC)
 
     try:
         with session_scope() as session:
@@ -315,7 +313,7 @@ async def run_incremental_refresh_async() -> None:
         with session_scope() as session:
             r = session.get(ScrapeRun, run_id)
             if r:
-                r.completed_at = datetime.now(timezone.utc)
+                r.completed_at = datetime.now(UTC)
                 r.products_scraped = scraped
                 r.products_failed = failed
                 r.status = "completed"
@@ -329,7 +327,7 @@ async def run_incremental_refresh_async() -> None:
                 "run_type": "incremental",
                 "products_scraped": scraped,
                 "products_failed": failed,
-                "duration_seconds": (datetime.now(timezone.utc) - start).total_seconds(),
+                "duration_seconds": (datetime.now(UTC) - start).total_seconds(),
             }
         )
     except Exception as exc:
@@ -337,7 +335,7 @@ async def run_incremental_refresh_async() -> None:
         with session_scope() as session:
             r = session.get(ScrapeRun, run_id)
             if r:
-                r.completed_at = datetime.now(timezone.utc)
+                r.completed_at = datetime.now(UTC)
                 r.status = "failed"
                 r.error_message = str(exc)
                 session.add(r)
@@ -346,3 +344,25 @@ async def run_incremental_refresh_async() -> None:
         active_workers["incremental"] -= 1
         await client.close()
         await hec.flush()
+
+
+async def _run_exclusive(kind: str, runner) -> None:
+    """Run ``runner`` unless another full/incremental refresh is already running.
+
+    Full and incremental refreshes share one lock so the target site is never
+    hit by two crawlers at once (and repeated admin triggers cannot pile up).
+    """
+    lock = get_run_lock("scrape")
+    if lock.locked():
+        logger.warning("task.refresh.skipped_already_running", kind=kind)
+        return
+    async with lock:
+        await runner()
+
+
+async def run_full_refresh_async() -> None:
+    await _run_exclusive("full", _run_full_refresh)
+
+
+async def run_incremental_refresh_async() -> None:
+    await _run_exclusive("incremental", _run_incremental_refresh)

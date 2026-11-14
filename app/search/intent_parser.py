@@ -6,8 +6,6 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Optional
-
 
 # ---------------------------------------------------------------------------
 # Synonym / keyword maps
@@ -188,13 +186,13 @@ class ParsedIntent:
     # Raw terms matched from the message (e.g. "chuteira", "corrida") — used
     # alongside the mapped category slugs so name/slug searches also hit.
     keywords: list[str] = field(default_factory=list)
-    brand: Optional[str] = None
-    price_min: Optional[float] = None
-    price_max: Optional[float] = None
-    available: Optional[bool] = None
+    brand: str | None = None
+    price_min: float | None = None
+    price_max: float | None = None
+    available: bool | None = None
     # Preferências pessoais do usuário (persistem por sessão no chat)
-    gender: Optional[str] = None
-    size: Optional[int] = None
+    gender: str | None = None
+    size: int | None = None
     skip_preferences: bool = False
     raw_query: str = ""
 
@@ -224,7 +222,7 @@ class ParsedIntent:
         return bool(terms & (FOOTWEAR_TERMS | APPAREL_TERMS))
 
 
-def _extract_size(norm: str, has_product_context: bool) -> Optional[int]:
+def _extract_size(norm: str, has_product_context: bool) -> int | None:
     """Extrai um número de calçado (16–50) da mensagem normalizada.
 
     Com contexto de produto (categoria ou gênero citado), um número solto

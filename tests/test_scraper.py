@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-import asyncio
 import time
-from pathlib import Path
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 
-from app.scraper.products import parse_product, infer_brand, PRODUCT_URL_RE
-from app.scraper.listings import extract_product_urls, is_page_empty
 from app.scraper.client import RateLimitedClient
+from app.scraper.listings import extract_product_urls, is_page_empty
+from app.scraper.products import PRODUCT_URL_RE, infer_brand, parse_product
 
 FIXTURES = Path(__file__).parent / "fixtures"
 

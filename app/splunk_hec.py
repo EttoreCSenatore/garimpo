@@ -2,11 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 import socket
 import time
 from pathlib import Path
-from typing import Optional
 
 import httpx
 import structlog
@@ -19,12 +17,12 @@ logger = structlog.get_logger()
 class SplunkHECLogger:
     def __init__(
         self,
-        url: Optional[str] = None,
-        token: Optional[str] = None,
-        batch_size: Optional[int] = None,
-        verify_ssl: Optional[bool] = None,
-        buffer_file: Optional[str] = None,
-        buffer_max_lines: Optional[int] = None,
+        url: str | None = None,
+        token: str | None = None,
+        batch_size: int | None = None,
+        verify_ssl: bool | None = None,
+        buffer_file: str | None = None,
+        buffer_max_lines: int | None = None,
     ) -> None:
         self.url = url or settings.splunk_hec_url
         self.token = token if token is not None else settings.splunk_hec_token
@@ -34,8 +32,8 @@ class SplunkHECLogger:
         self.buffer_max_lines = buffer_max_lines or settings.splunk_buffer_max_lines
         self._buffer: list[dict] = []
         self._lock = asyncio.Lock()
-        self._client: Optional[httpx.AsyncClient] = None
-        self._flush_task: Optional[asyncio.Task] = None
+        self._client: httpx.AsyncClient | None = None
+        self._flush_task: asyncio.Task | None = None
 
     async def _get_client(self) -> httpx.AsyncClient:
         if self._client is None or self._client.is_closed:
@@ -161,7 +159,7 @@ class SplunkHECLogger:
             await self._client.aclose()
 
 
-_hec_logger: Optional[SplunkHECLogger] = None
+_hec_logger: SplunkHECLogger | None = None
 
 
 def get_hec_logger() -> SplunkHECLogger:

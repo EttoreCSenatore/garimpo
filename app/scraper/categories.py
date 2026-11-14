@@ -1,18 +1,17 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 from urllib.parse import urljoin
 
 import structlog
 from lxml import etree
-from sqlmodel import Session, select
 
 from app.config import settings
 from app.db import session_scope
 from app.models import Category
 from app.scraper.client import RateLimitedClient
+from app.scraper.listings import _same_site_url
 
 logger = structlog.get_logger()
 
@@ -24,7 +23,9 @@ async def fetch_categories(client: RateLimitedClient) -> list[Category]:
     resp = await client.get_raw(sitemap_url)
     resp.raise_for_status()
 
-    root = etree.fromstring(resp.content)
+    # Hardened parser: the sitemap is untrusted input (no entities, DTDs or network access).
+    parser = etree.XMLParser(resolve_entities=False, no_network=True, load_dtd=False, huge_tree=False)
+    root = etree.fromstring(resp.content, parser=parser)
     namespaces = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
 
     urls = root.xpath("//sm:url/sm:loc/text()", namespaces=namespaces)
@@ -35,6 +36,9 @@ async def fetch_categories(client: RateLimitedClient) -> list[Category]:
     seen_ids: set[int] = set()
 
     for url in urls:
+        url = _same_site_url(str(url))
+        if not url:
+            continue
         match = CATEGORY_URL_RE.search(url)
         if not match:
             continue
@@ -64,13 +68,13 @@ def store_categories(categories: list[Category]) -> None:
                 existing.slug = cat.slug
                 existing.url = cat.url
                 existing.name = cat.name
-                existing.last_seen = datetime.now(timezone.utc)
+                existing.last_seen = datetime.now(UTC)
             else:
                 session.add(cat)
         session.commit()
 
 
-async def discover_categories(client: Optional[RateLimitedClient] = None) -> list[Category]:
+async def discover_categories(client: RateLimitedClient | None = None) -> list[Category]:
     own_client = client is None
     if own_client:
         client = RateLimitedClient()

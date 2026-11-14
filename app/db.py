@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Iterator
 
+import structlog
 from sqlmodel import Session, SQLModel, create_engine
 
 from app.config import settings
@@ -23,8 +24,8 @@ def _enable_wal() -> None:
         with engine.connect() as conn:
             conn.exec_driver_sql("PRAGMA journal_mode=WAL;")
             conn.exec_driver_sql("PRAGMA synchronous=NORMAL;")
-    except Exception:
-        pass
+    except Exception as exc:  # WAL is an optimisation; keep running without it
+        structlog.get_logger().warning("db.wal_unavailable", error=str(exc))
 
 
 def get_session() -> Iterator[Session]:

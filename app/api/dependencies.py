@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from typing import Generator
+from collections.abc import Generator
 
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Header, HTTPException, status
 from sqlmodel import Session
 
 from app.config import settings
 from app.db import engine
+from app.security import tokens_match
 from app.splunk_hec import SplunkHECLogger, get_hec_logger
 
 
@@ -19,10 +20,12 @@ def get_splunk() -> SplunkHECLogger:
     return get_hec_logger()
 
 
-def require_admin(x_admin_token: str = Header(...)) -> str:
-    if x_admin_token != settings.admin_token:
+def require_admin(x_admin_token: str | None = Header(default=None)) -> str:
+    """Authenticate admin endpoints. Disabled entirely when ADMIN_TOKEN is empty."""
+    if not tokens_match(x_admin_token, settings.admin_token):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid admin token",
+            detail="Invalid or missing admin token",
+            headers={"WWW-Authenticate": "Admin-Token"},
         )
-    return x_admin_token
+    return "admin"

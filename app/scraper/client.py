@@ -3,25 +3,30 @@ from __future__ import annotations
 import asyncio
 import random
 import time
-from typing import Optional
+from urllib.parse import urlparse
 
 import httpx
 import structlog
 
 from app.config import settings
+from app.security import host_allowed
 
 logger = structlog.get_logger()
+
+
+class DisallowedRequestError(ValueError):
+    """Raised when a request would leave the target site or hit a robots-disallowed path."""
 
 
 class RateLimitedClient:
     def __init__(
         self,
-        user_agent: Optional[str] = None,
-        base_url: Optional[str] = None,
-        requests_per_second: Optional[float] = None,
-        jitter_min_ms: Optional[int] = None,
-        jitter_max_ms: Optional[int] = None,
-        max_retries: Optional[int] = None,
+        user_agent: str | None = None,
+        base_url: str | None = None,
+        requests_per_second: float | None = None,
+        jitter_min_ms: int | None = None,
+        jitter_max_ms: int | None = None,
+        max_retries: int | None = None,
     ) -> None:
         self.user_agent = user_agent or settings.user_agent
         self.base_url = base_url or settings.base_url
@@ -33,7 +38,7 @@ class RateLimitedClient:
         self._min_interval = 1.0 / max(self.requests_per_second, 0.01)
         self._last_request_time = 0.0
         self._lock = asyncio.Lock()
-        self._client: Optional[httpx.AsyncClient] = None
+        self._client: httpx.AsyncClient | None = None
 
     async def get_client(self) -> httpx.AsyncClient:
         if self._client is None or self._client.is_closed:
@@ -61,7 +66,21 @@ class RateLimitedClient:
             await asyncio.sleep(jitter)
             self._last_request_time = time.monotonic()
 
-    async def get(self, path: str, *, retries: Optional[int] = None) -> httpx.Response:
+    def _check_allowed(self, target: str) -> None:
+        """Only crawl the configured site, and never robots.txt-disallowed paths."""
+        parsed = urlparse(target)
+        if parsed.scheme or parsed.netloc:
+            base_host = urlparse(self.base_url).hostname or ""
+            if parsed.scheme not in ("http", "https") or not parsed.hostname:
+                raise DisallowedRequestError(f"unsupported URL: {target}")
+            if not host_allowed(parsed.hostname, [base_host.lower().removeprefix("www.")]):
+                raise DisallowedRequestError(f"host not allowed: {parsed.hostname}")
+        path = parsed.path or "/"
+        if any(path == d or path.startswith(d.rstrip("/") + "/") for d in settings.robots_disallowed):
+            raise DisallowedRequestError(f"path disallowed by robots.txt: {path}")
+
+    async def get(self, path: str, *, retries: int | None = None) -> httpx.Response:
+        self._check_allowed(path)
         retries = retries if retries is not None else self.max_retries
         attempt = 0
         while True:
@@ -98,7 +117,8 @@ class RateLimitedClient:
                     continue
                 raise
 
-    async def get_raw(self, url: str, *, retries: Optional[int] = None) -> httpx.Response:
+    async def get_raw(self, url: str, *, retries: int | None = None) -> httpx.Response:
+        self._check_allowed(url)
         retries = retries if retries is not None else self.max_retries
         attempt = 0
         while True:

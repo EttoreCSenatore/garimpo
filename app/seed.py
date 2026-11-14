@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import urllib.parse
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
-from sqlmodel import Session, select, func
+from sqlmodel import Session
+
 from app.db import engine, init_db
-from app.models import Category, Product, ProductStatus, ScrapeRun
+from app.models import Product, ProductStatus, ScrapeRun
 
 
 def make_svg(brand: str, model: str, category: str, c1: str, c2: str, icon: str = "shoe") -> str:
@@ -276,7 +277,7 @@ SAMPLE_PRODUCTS = [
 def seed_database(force: bool = False) -> int:
     init_db()
     with Session(engine, expire_on_commit=False) as session:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         for item in SAMPLE_PRODUCTS:
             existing = session.get(Product, item["id"])
             if existing:

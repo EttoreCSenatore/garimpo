@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -58,7 +58,7 @@ def _seed_products(session: Session, count: int = 5):
             breadcrumbs=["Calçados", "Tênis"],
             brand="Nike" if i % 2 == 0 else "Adidas",
             status=ProductStatus.ACTIVE,
-            scraped_at=datetime.now(timezone.utc),
+            scraped_at=datetime.now(UTC),
         )
         session.add(product)
     session.commit()
@@ -189,10 +189,16 @@ def test_stats(client, db_session):
 
 def test_admin_refresh_requires_token(client, db_session):
     response = client.post("/admin/refresh")
-    assert response.status_code == 422
+    assert response.status_code == 401
 
 
 def test_admin_refresh_with_token(client, db_session, monkeypatch):
+    import app.tasks
+
+    async def fake_refresh() -> None:  # never scrape the real site from tests
+        return None
+
+    monkeypatch.setattr(app.tasks, "run_full_refresh_async", fake_refresh)
     monkeypatch.setattr(settings, "admin_token", "test-token")
     response = client.post("/admin/refresh", headers={"X-Admin-Token": "test-token"})
     assert response.status_code == 200
@@ -201,7 +207,7 @@ def test_admin_refresh_with_token(client, db_session, monkeypatch):
 
 def test_admin_queue_requires_token(client, db_session):
     response = client.get("/admin/queue")
-    assert response.status_code == 422
+    assert response.status_code == 401
 
 
 def test_cache_headers(client, db_session):
@@ -280,7 +286,7 @@ def _seed_personalized_products(session: Session):
             breadcrumbs=["Calçados"],
             brand="Nike",
             status=ProductStatus.ACTIVE,
-            scraped_at=datetime.now(timezone.utc),
+            scraped_at=datetime.now(UTC),
         )
         session.add(product)
     session.commit()
@@ -385,7 +391,7 @@ def test_chat_endpoint_chuteira_nike(client, db_session):
         breadcrumbs=[],
         brand="Nike",
         status=ProductStatus.ACTIVE,
-        scraped_at=datetime.now(timezone.utc),
+        scraped_at=datetime.now(UTC),
     )
     db_session.add(product)
     db_session.commit()
