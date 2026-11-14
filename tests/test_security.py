@@ -215,12 +215,12 @@ def test_listing_extraction_drops_foreign_and_script_urls():
     from app.scraper.listings import extract_product_urls
 
     html = """
-    <a href="/123-tenis-nike">ok</a>
-    <a href="https://evil.com/1-x">foreign</a>
-    <a href="javascript:alert(1)//9-x">js</a>
-    <a href="//cdn.evil.com/5-y">proto-relative</a>
+    <a class="product-item-link" href="/tenis-nike-123">ok</a>
+    <a class="product-item-link" href="https://evil.com/x-1">foreign</a>
+    <a class="product-item-link" href="javascript:alert(1)//x-9">js</a>
+    <a class="product-item-link" href="//cdn.evil.com/y-5">proto-relative</a>
     """
-    assert extract_product_urls(html) == ["https://www.tivolli.com.br/123-tenis-nike"]
+    assert extract_product_urls(html) == ["https://www.tivolli.com.br/tenis-nike-123"]
 
 
 @pytest.mark.asyncio

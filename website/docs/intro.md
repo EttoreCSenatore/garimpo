@@ -21,7 +21,7 @@ The screenshots in this documentation use generic demo products (`python -m app.
 
 | Part | What it does |
 | --- | --- |
-| **Scraper** | Discovers categories from `sitemap.xml`, crawls listings and product pages at ~1 request/second with jitter and back-off. |
+| **Scraper** | Discovers categories from `google_sitemap.xml`, crawls listings and product pages at ~1 request/second with jitter and back-off. |
 | **REST API** | FastAPI service with cursor pagination, filters, price history and OpenAPI docs. |
 | **Chat search** | A rule-based intent parser (no LLM, no API keys) turns a sentence into database filters and asks for gender and shoe size when needed. |
 | **Frontend** | React + TypeScript + Tailwind chat UI that renders products as cards. |

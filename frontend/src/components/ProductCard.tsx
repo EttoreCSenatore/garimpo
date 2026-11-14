@@ -1,40 +1,10 @@
 import { useState } from 'react'
 import type { Product } from '../types'
+import { formatPrice, getImageUrl, installmentsLabel } from '../lib'
+import ProductDetail from './ProductDetail'
 
 interface ProductCardProps {
   product: Product
-}
-
-function formatPrice(value: number | null | undefined): string {
-  if (value == null) return '—'
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    minimumFractionDigits: 2,
-  }).format(value)
-}
-
-/** Returns the URL only if it is plain http(s); blocks javascript:, data: and other schemes. */
-function safeHttpUrl(url?: string | null): string | undefined {
-  if (!url) return undefined
-  try {
-    const parsed = new URL(url, window.location.origin)
-    return parsed.protocol === 'https:' || parsed.protocol === 'http:' ? parsed.href : undefined
-  } catch {
-    return undefined
-  }
-}
-
-// Keep in sync with IMAGE_PROXY_ALLOWED_HOSTS on the API.
-const PROXIED_HOSTS = ['estatico.tivollisports.com.br', 'www.tivolli.com.br']
-
-function getImageUrl(url?: string | null): string | undefined {
-  if (!url) return undefined
-  const absolute = safeHttpUrl(url.startsWith('//') ? `https:${url}` : url)
-  if (!absolute) return undefined
-  const host = new URL(absolute).hostname
-  const isShopHost = PROXIED_HOSTS.includes(host)
-  return isShopHost ? `/api/image-proxy?url=${encodeURIComponent(absolute)}` : absolute
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
@@ -42,14 +12,15 @@ export default function ProductCard({ product }: ProductCardProps) {
   const mainImage = product.images?.[0]
   const displayImage = getImageUrl(mainImage)
   const isAvailable = product.available && product.status === 'active'
-  const productUrl = safeHttpUrl(product.url)
+  const [open, setOpen] = useState(false)
+  const installments = installmentsLabel(product)
 
   return (
-    <a
-      href={productUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group flex flex-col bg-white rounded-2xl border border-slate-100 overflow-hidden
+    <>
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      className="group text-left flex flex-col bg-white rounded-2xl border border-slate-100 overflow-hidden
                  hover:shadow-lg hover:border-slate-200 transition-all duration-200 cursor-pointer"
     >
       {/* Image */}
@@ -58,7 +29,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           <img
             src={displayImage}
             alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
             loading="lazy"
             onError={() => setImgError(true)}
           />
@@ -118,6 +89,8 @@ export default function ProductCard({ product }: ProductCardProps) {
             <span className="text-sm text-slate-400 italic">Preço indisponível</span>
           )}
 
+          {installments && <p className="text-xs text-slate-500 mt-0.5">{installments}</p>}
+
           {product.price_boleto != null && product.price_boleto !== product.price && (
             <p className="text-xs text-slate-400 mt-0.5">
               À vista:{' '}
@@ -128,6 +101,8 @@ export default function ProductCard({ product }: ProductCardProps) {
           )}
         </div>
       </div>
-    </a>
+    </button>
+    {open && <ProductDetail product={product} onClose={() => setOpen(false)} />}
+    </>
   )
 }

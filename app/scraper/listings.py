@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from urllib.parse import urljoin, urlparse
 
 import structlog
@@ -8,11 +7,11 @@ from selectolax.lexbor import LexborHTMLParser as HTMLParser
 
 from app.config import settings
 from app.scraper.client import RateLimitedClient
+from app.scraper.products import parse_product_url
 from app.security import safe_http_url
 
 logger = structlog.get_logger()
 
-PRODUCT_URL_RE = re.compile(r"(?:^|/)(\d+)-([\w-]+)")
 MAX_PAGES = 200
 
 
@@ -23,33 +22,21 @@ def _same_site_url(url: str) -> str | None:
 
 
 def extract_product_urls(html: str) -> list[str]:
+    """Product links of a Magento listing page (``a.product-item-link``), in page order."""
     tree = HTMLParser(html)
     urls: list[str] = []
     seen: set[str] = set()
-
-    for node in tree.css("a[href]"):
+    for node in tree.css("a.product-item-link[href]"):
         href = node.attributes.get("href", "")
-        if not href:
-            continue
-        if "/c/" in href:
-            continue
-        if PRODUCT_URL_RE.search(href):
-            full = _same_site_url(urljoin(settings.base_url, href))
-            if full and full not in seen:
-                seen.add(full)
-                urls.append(full)
+        full = _same_site_url(urljoin(settings.base_url, href))
+        if full and parse_product_url(full) and full not in seen:
+            seen.add(full)
+            urls.append(full)
     return urls
 
 
 def is_page_empty(html: str) -> bool:
-    tree = HTMLParser(html)
-    for node in tree.css("a[href]"):
-        href = node.attributes.get("href", "")
-        if "/c/" in href:
-            continue
-        if PRODUCT_URL_RE.search(href):
-            return False
-    return True
+    return not extract_product_urls(html)
 
 
 async def crawl_category(
@@ -62,7 +49,7 @@ async def crawl_category(
     seen: set[str] = set()
 
     for page in range(1, max_pages + 1):
-        path = f"/c/{category_id}-{category_slug}?p={page}"
+        path = f"/{category_slug}?p={page}"
         try:
             resp = await client.get(path)
             if resp.status_code == 404:

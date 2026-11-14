@@ -23,7 +23,7 @@ Settings come from environment variables or a `.env` file (see `.env.example`). 
 | --- | --- | --- |
 | `ADMIN_TOKEN` | *(empty)* | Empty disables `/admin/*`. Must be 24+ random characters in production. |
 | `CORS_ORIGINS` | `http://localhost:5173,http://127.0.0.1:5173` | Comma-separated allowed browser origins. `*` is ignored. |
-| `IMAGE_PROXY_ALLOWED_HOSTS` | `estatico.tivollisports.com.br,www.tivolli.com.br` | Exact hostnames the image proxy may fetch. |
+| `IMAGE_PROXY_ALLOWED_HOSTS` | `www.tivolli.com.br` | Exact hostnames the image proxy may fetch. |
 | `CHAT_RATE_LIMIT_PER_MINUTE` / `IMAGE_RATE_LIMIT_PER_MINUTE` | `30` / `240` | Per-client limits; `0` disables. |
 | `TRUST_PROXY_HEADERS` | `false` | Use `X-Forwarded-For` for client identity (only behind a trusted proxy). |
 

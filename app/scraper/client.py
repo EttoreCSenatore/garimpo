@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import random
 import time
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 import httpx
 import structlog
@@ -92,6 +92,9 @@ class RateLimitedClient:
         path = parsed.path or "/"
         if any(path == d or path.startswith(d.rstrip("/") + "/") for d in settings.robots_disallowed):
             raise DisallowedRequestError(f"path disallowed by robots.txt: {path}")
+        blocked = {k.lower() for k in parse_qs(parsed.query, keep_blank_values=True)} & settings.robots_disallowed_params
+        if blocked:
+            raise DisallowedRequestError(f"query parameter disallowed by robots.txt: {sorted(blocked)[0]}")
 
     async def get(self, path: str, *, retries: int | None = None) -> httpx.Response:
         """GET a path (or absolute URL) on the target site with throttling and retries."""

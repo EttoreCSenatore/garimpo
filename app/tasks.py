@@ -71,7 +71,7 @@ def _save_product(data: dict) -> tuple[Product, bool]:
             existing.images = data.get("images", [])
             existing.category_id = data.get("category_id")
             existing.breadcrumbs = data.get("breadcrumbs", [])
-            existing.brand = infer_brand(data["name"], data.get("codigo"))
+            existing.brand = data.get("brand") or infer_brand(data["name"], data.get("codigo"))
             existing.status = data.get("status", ProductStatus.ACTIVE)
             existing.scraped_at = data.get("scraped_at", now)
             existing.updated_at = now
@@ -96,7 +96,7 @@ def _save_product(data: dict) -> tuple[Product, bool]:
                 images=data.get("images", []),
                 category_id=data.get("category_id"),
                 breadcrumbs=data.get("breadcrumbs", []),
-                brand=infer_brand(data["name"], data.get("codigo")),
+                brand=data.get("brand") or infer_brand(data["name"], data.get("codigo")),
                 status=data.get("status", ProductStatus.ACTIVE),
                 scraped_at=data.get("scraped_at", now),
             )
