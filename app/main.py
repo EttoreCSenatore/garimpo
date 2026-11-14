@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import asyncio
 import contextlib
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import structlog
 import uvicorn
@@ -13,7 +12,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import router
 from app.config import settings
 from app.db import init_db
+from app.security import SecurityHeadersMiddleware
 from app.splunk_hec import get_hec_logger
+from app.state import spawn
 
 structlog.configure(
     processors=[
@@ -30,8 +31,15 @@ scheduler: AsyncIOScheduler | None = None
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
     global scheduler
+    settings.validate_for_runtime()
     init_db()
     logger.info("app.startup", env=settings.app_env)
+
+    if not settings.scheduler_enabled:
+        logger.info("scheduler.disabled")
+        yield
+        await get_hec_logger().aclose()
+        return
 
     scheduler = AsyncIOScheduler()
     scheduler.add_job(
@@ -40,7 +48,9 @@ async def lifespan(app: FastAPI):
         minutes=settings.full_refresh_interval_minutes,
         id="full_refresh",
         replace_existing=True,
-        next_run_time=datetime.now(timezone.utc) + timedelta(minutes=1),
+        max_instances=1,
+        coalesce=True,
+        next_run_time=datetime.now(UTC) + timedelta(minutes=1),
     )
     scheduler.add_job(
         run_incremental_refresh_job,
@@ -48,6 +58,8 @@ async def lifespan(app: FastAPI):
         minutes=settings.incremental_refresh_interval_minutes,
         id="incremental_refresh",
         replace_existing=True,
+        max_instances=1,
+        coalesce=True,
     )
     scheduler.start()
     logger.info("scheduler.started")
@@ -63,12 +75,12 @@ async def lifespan(app: FastAPI):
 
 async def run_full_refresh_job() -> None:
     from app.tasks import run_full_refresh_async
-    asyncio.create_task(run_full_refresh_async())
+    spawn(run_full_refresh_async())
 
 
 async def run_incremental_refresh_job() -> None:
     from app.tasks import run_incremental_refresh_async
-    asyncio.create_task(run_incremental_refresh_async())
+    spawn(run_incremental_refresh_async())
 
 
 app = FastAPI(
@@ -78,12 +90,13 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=settings.cors_origin_list,
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "X-Admin-Token"],
 )
 
 app.include_router(router)

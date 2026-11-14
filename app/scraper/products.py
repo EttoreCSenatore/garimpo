@@ -1,16 +1,15 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
-from typing import Optional
 
 import structlog
 from selectolax.lexbor import LexborHTMLParser as HTMLParser
 
-from app.config import settings
 from app.models import Installments, ProductStatus
 from app.scraper.client import RateLimitedClient
+from app.security import safe_http_url
 
 logger = structlog.get_logger()
 
@@ -19,7 +18,7 @@ PRICE_RE = re.compile(r"R\$\s*([\d.]+,\d{2})")
 CODE_RE = re.compile(r"(?:[A-Z]{2}\d{4}\s*\d{3}|[A-Z]{2,4}\d{4,6})")
 
 
-def _parse_price(text: str) -> Optional[Decimal]:
+def _parse_price(text: str) -> Decimal | None:
     match = PRICE_RE.search(text)
     if not match:
         return None
@@ -36,7 +35,7 @@ def _extract_text(node) -> str:
     return node.text(strip=True) or ""
 
 
-def parse_product(html: str, url: str, category_id: Optional[int] = None) -> dict:
+def parse_product(html: str, url: str, category_id: int | None = None) -> dict:
     tree = HTMLParser(html)
     result: dict = {}
 
@@ -193,7 +192,8 @@ def parse_product(html: str, url: str, category_id: Optional[int] = None) -> dic
                     src = "https:" + src
                 if src.startswith("http"):
                     images.append(src)
-    result["images"] = list(dict.fromkeys(images))
+    # Keep only plain http(s) image URLs (drops javascript:/data: and IP literals).
+    result["images"] = [u for u in dict.fromkeys(images) if safe_http_url(u)]
 
     result["category_id"] = category_id
 
@@ -209,7 +209,7 @@ def parse_product(html: str, url: str, category_id: Optional[int] = None) -> dic
             break
     result["breadcrumbs"] = breadcrumbs
 
-    result["scraped_at"] = datetime.now(timezone.utc)
+    result["scraped_at"] = datetime.now(UTC)
     result["status"] = ProductStatus.ACTIVE if available else ProductStatus.OUT_OF_STOCK
 
     return result
@@ -218,8 +218,8 @@ def parse_product(html: str, url: str, category_id: Optional[int] = None) -> dic
 async def fetch_and_parse_product(
     client: RateLimitedClient,
     url: str,
-    category_id: Optional[int] = None,
-) -> Optional[dict]:
+    category_id: int | None = None,
+) -> dict | None:
     try:
         resp = await client.get_raw(url)
         if resp.status_code == 404:
@@ -243,14 +243,14 @@ async def fetch_and_parse_product(
         return None
 
 
-def _extract_id(url: str) -> Optional[int]:
+def _extract_id(url: str) -> int | None:
     match = PRODUCT_URL_RE.search(url)
     if match:
         return int(match.group(1))
     return None
 
 
-def infer_brand(name: str, codigo: Optional[str]) -> Optional[str]:
+def infer_brand(name: str, codigo: str | None) -> str | None:
     brand_map = {
         "nike": "Nike",
         "adidas": "Adidas",

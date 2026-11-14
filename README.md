@@ -67,7 +67,7 @@ cp .env.example .env
 ### Run
 
 ```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 - API: http://localhost:8000
@@ -90,7 +90,7 @@ See [.env.example](.env.example) for the full list. Key variables:
 | `USER_AGENT` | `TivolliBot/1.0 (...)` | Crawler User-Agent |
 | `REQUESTS_PER_SECOND` | `1` | Global rate limit |
 | `DATABASE_URL` | `sqlite:///./tivolli.db` | SQLite path |
-| `ADMIN_TOKEN` | `change-me...` | Admin API token |
+| `ADMIN_TOKEN` | *(empty)* | Admin API token. Empty disables `/admin/*`; must be 24+ random characters when `APP_ENV=production` |
 | `SPLUNK_HEC_URL` | `https://localhost:8088/services/collector/event` | HEC endpoint |
 | `SPLUNK_HEC_TOKEN` | _(empty)_ | HEC token |
 | `DISCLAIMER` | `false` | If `true`, prices marked "indicative" |
@@ -125,7 +125,7 @@ curl -X POST http://localhost:8000/admin/refresh -H "X-Admin-Token: your-token"
    - Enable **Indexer Acknowledgment**.
    - Leave index as `main` (or create a `tivolli` index).
 2. Copy the generated token into `.env` as `SPLUNK_HEC_TOKEN`.
-3. (Self-signed certs) Leave `SPLUNK_HEC_VERIFY_SSL=false` for local Splunk Free.
+3. (Self-signed certs, local Splunk Free only) set `SPLUNK_HEC_VERIFY_SSL=false`. Keep it `true` (the default) for anything else.
 
 ### Sample Search
 

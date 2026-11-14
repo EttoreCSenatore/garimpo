@@ -1,5 +1,16 @@
+import type { ReactNode } from 'react'
 import type { ChatMessage } from '../types'
 import ProductCard from './ProductCard'
+
+/** Renders the small markdown subset the API uses (**bold**, newlines) as React nodes, never raw HTML. */
+function renderRichText(text: string): ReactNode[] {
+  return text.split('\n').flatMap((line, lineIndex, lines) => {
+    const parts = line.split(/\*\*(.+?)\*\*/g).map((part, i) =>
+      i % 2 === 1 ? <strong key={`${lineIndex}-${i}`}>{part}</strong> : part,
+    )
+    return lineIndex < lines.length - 1 ? [...parts, <br key={`br-${lineIndex}`} />] : parts
+  })
+}
 
 interface ChatBubbleProps {
   message: ChatMessage
@@ -35,12 +46,9 @@ export default function ChatBubble({ message }: ChatBubbleProps) {
         <div
           className="bg-white border border-slate-100 rounded-2xl rounded-tl-sm
                      px-4 py-3 text-sm text-slate-700 shadow-sm max-w-[80%] leading-relaxed"
-          dangerouslySetInnerHTML={{
-            __html: message.text
-              .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-              .replace(/\n/g, '<br />'),
-          }}
-        />
+        >
+          {renderRichText(message.text)}
+        </div>
       </div>
 
       {/* Product grid */}

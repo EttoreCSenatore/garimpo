@@ -3,19 +3,37 @@ services:
     build: .
     container_name: tivolli-scraper
     ports:
-      - "8000:8000"
+      # Loopback only. Put a TLS-terminating reverse proxy in front for public access.
+      - "127.0.0.1:8000:8000"
     environment:
       - APP_ENV=production
+      - HOST=0.0.0.0
       - DATABASE_URL=sqlite:////app/data/tivolli.db
-      - ADMIN_TOKEN=${ADMIN_TOKEN:-change-me-to-a-secure-token}
+      - SPLUNK_BUFFER_FILE=/app/data/events.jsonl
+      # No default on purpose: `docker compose up` fails until a strong token is provided.
+      - ADMIN_TOKEN=${ADMIN_TOKEN:?Set ADMIN_TOKEN to a random value, e.g. openssl rand -hex 32}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173}
+      - USER_AGENT=${USER_AGENT:-TivolliBot/1.0 (+https://github.com/EttoreCSenatore/tivolli-sports)}
       - SPLUNK_HEC_URL=${SPLUNK_HEC_URL:-https://host.docker.internal:8088/services/collector/event}
       - SPLUNK_HEC_TOKEN=${SPLUNK_HEC_TOKEN:-}
+      - SPLUNK_HEC_VERIFY_SSL=${SPLUNK_HEC_VERIFY_SSL:-true}
       - DISCLAIMER=${DISCLAIMER:-false}
     volumes:
       - tivolli_data:/app/data
     restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=5).status == 200 else 1)"
       interval: 30s
       timeout: 10s
       retries: 3

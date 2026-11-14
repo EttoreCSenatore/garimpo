@@ -1,19 +1,25 @@
 from __future__ import annotations
 
 import re
-from typing import Optional
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import structlog
 from selectolax.lexbor import LexborHTMLParser as HTMLParser
 
 from app.config import settings
 from app.scraper.client import RateLimitedClient
+from app.security import safe_http_url
 
 logger = structlog.get_logger()
 
 PRODUCT_URL_RE = re.compile(r"(?:^|/)(\d+)-([\w-]+)")
 MAX_PAGES = 200
+
+
+def _same_site_url(url: str) -> str | None:
+    """Accept only http(s) URLs on the configured shop host (rejects javascript:, data:, other hosts)."""
+    host = (urlparse(settings.base_url).hostname or "").lower().removeprefix("www.")
+    return safe_http_url(url, [host])
 
 
 def extract_product_urls(html: str) -> list[str]:
@@ -28,8 +34,8 @@ def extract_product_urls(html: str) -> list[str]:
         if "/c/" in href:
             continue
         if PRODUCT_URL_RE.search(href):
-            full = urljoin(settings.base_url, href)
-            if full not in seen:
+            full = _same_site_url(urljoin(settings.base_url, href))
+            if full and full not in seen:
                 seen.add(full)
                 urls.append(full)
     return urls

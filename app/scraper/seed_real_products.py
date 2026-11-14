@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
-import structlog
-from sqlmodel import Session, select, func
+from datetime import UTC, datetime
 
-from app.db import engine, init_db, session_scope
-from app.models import Category, Product, ProductStatus, ScrapeRun
+import structlog
+from sqlmodel import select
+
+from app.db import init_db, session_scope
+from app.models import Product, ScrapeRun
 from app.scraper.client import RateLimitedClient
 from app.scraper.listings import crawl_category
 from app.scraper.products import fetch_and_parse_product, infer_brand
@@ -47,7 +48,7 @@ async def seed_real_products_from_tivolli(max_per_category: int = 10) -> int:
     init_db()
     client = RateLimitedClient()
     saved_count = 0
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     # First delete any synthetic seed products with IDs < 10000
     with session_scope() as session:
@@ -62,7 +63,7 @@ async def seed_real_products_from_tivolli(max_per_category: int = 10) -> int:
         for cat_id, cat_slug in TARGET_CATEGORIES:
             urls = await crawl_category(cat_id, cat_slug, client, max_pages=1)
             logger.info("seed.crawled_category", category=cat_slug, found_urls=len(urls))
-            
+
             for url in urls[:max_per_category]:
                 try:
                     data = await fetch_and_parse_product(client, url, cat_id)
@@ -91,7 +92,7 @@ async def seed_real_products_from_tivolli(max_per_category: int = 10) -> int:
             run = ScrapeRun(
                 run_type="seed_real",
                 started_at=now,
-                completed_at=datetime.now(timezone.utc),
+                completed_at=datetime.now(UTC),
                 products_scraped=saved_count,
                 products_failed=0,
                 products_disappeared=0,
