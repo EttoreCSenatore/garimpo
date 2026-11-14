@@ -19,7 +19,7 @@ from app.api.dependencies import get_db, get_splunk, require_admin
 from app.config import settings
 from app.models import Category, Product, ProductHistory, ProductStatus, ScrapeRun
 from app.search.intent_parser import ParsedIntent, parse_intent
-from app.security import chat_rate_limit, image_rate_limit, safe_http_url
+from app.security import chat_rate_limit, image_rate_limit, resolve_allowed_url
 from app.splunk_hec import SplunkHECLogger
 from app.state import MAX_INFLIGHT_SINGLE, active_workers, inflight_single, spawn
 
@@ -350,12 +350,13 @@ def _sniff_image_type(head: bytes) -> str | None:
 async def proxy_image(url: str = Query(..., max_length=2048)):
     """Proxy a product image from an allow-listed shop host.
 
-    Hardened against SSRF: https/http only, allow-listed hosts (no IP literals),
+    Hardened against SSRF: the request host always comes from an exact-match
+    allow-list (never from the caller, no IP literals), https only,
     every redirect hop re-validated, response size capped, and only raster image
     types are returned (no SVG/HTML).
     """
     allowed = settings.image_host_list
-    current = safe_http_url(url, allowed)
+    current = resolve_allowed_url(url, allowed)
     if current is None:
         raise HTTPException(status_code=400, detail="URL de imagem não permitida")
 
@@ -364,7 +365,7 @@ async def proxy_image(url: str = Query(..., max_length=2048)):
             for _ in range(_MAX_REDIRECTS + 1):
                 async with client.stream("GET", current) as resp:
                     if resp.is_redirect:
-                        nxt = safe_http_url(urljoin(current, resp.headers.get("location", "")), allowed)
+                        nxt = resolve_allowed_url(urljoin(current, resp.headers.get("location", "")), allowed)
                         if nxt is None:
                             raise HTTPException(status_code=502, detail="Redirecionamento não permitido")
                         current = nxt

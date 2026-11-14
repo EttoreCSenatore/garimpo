@@ -47,6 +47,24 @@ def safe_http_url(url: str | None, allowed_hosts: list[str] | None = None) -> st
     return url.strip()
 
 
+def resolve_allowed_url(url: str | None, allowed_hosts: list[str]) -> str | None:
+    """Rebuild ``url`` on an exact, pre-configured host.
+
+    The returned URL's scheme and host come from the allow-list (configuration),
+    never from the caller; only the path and query are taken from ``url``.
+    """
+    safe = safe_http_url(url)
+    if safe is None:
+        return None
+    parsed = urlparse(safe)
+    host = (parsed.hostname or "").lower().rstrip(".")
+    trusted = next((h for h in allowed_hosts if h == host), None)
+    if trusted is None or parsed.port not in (None, 80, 443):
+        return None
+    path = parsed.path or "/"
+    return f"https://{trusted}{path}" + (f"?{parsed.query}" if parsed.query else "")
+
+
 class RateLimiter:
     """In-process sliding-window limiter keyed by client address."""
 

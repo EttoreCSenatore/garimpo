@@ -241,3 +241,14 @@ def test_sitemap_parser_ignores_external_entities():
     parser = etree.XMLParser(resolve_entities=False, no_network=True, load_dtd=False, huge_tree=False)
     root = etree.fromstring(xml, parser=parser)
     assert "root:" not in (root.xpath("string(//loc)") or "")
+
+
+def test_resolve_allowed_url_uses_exact_hosts_only():
+    from app.security import resolve_allowed_url
+
+    allowed = ["estatico.tivollisports.com.br"]
+    assert resolve_allowed_url("http://estatico.tivollisports.com.br/a.jpg?x=1", allowed) == (
+        "https://estatico.tivollisports.com.br/a.jpg?x=1"
+    )
+    assert resolve_allowed_url("https://evil.tivollisports.com.br/a.jpg", allowed) is None
+    assert resolve_allowed_url("https://estatico.tivollisports.com.br:8443/a.jpg", allowed) is None

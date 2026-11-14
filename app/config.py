@@ -39,8 +39,8 @@ class Settings(BaseSettings):
     # Comma-separated list of origins allowed to call the API from a browser.
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
-    # Hosts (and their subdomains) the image proxy may fetch from.
-    image_proxy_allowed_hosts: str = "tivolli.com.br,tivollisports.com.br"
+    # Exact hostnames the image proxy may fetch from (no wildcards, no IPs).
+    image_proxy_allowed_hosts: str = "estatico.tivollisports.com.br,www.tivolli.com.br"
     image_proxy_max_bytes: int = 5 * 1024 * 1024
 
     # Simple per-client sliding-window limits (requests per minute). 0 disables.

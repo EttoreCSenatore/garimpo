@@ -25,12 +25,15 @@ function safeHttpUrl(url?: string | null): string | undefined {
   }
 }
 
+// Keep in sync with IMAGE_PROXY_ALLOWED_HOSTS on the API.
+const PROXIED_HOSTS = ['estatico.tivollisports.com.br', 'www.tivolli.com.br']
+
 function getImageUrl(url?: string | null): string | undefined {
   if (!url) return undefined
   const absolute = safeHttpUrl(url.startsWith('//') ? `https:${url}` : url)
   if (!absolute) return undefined
   const host = new URL(absolute).hostname
-  const isShopHost = /(^|\.)(tivolli\.com\.br|tivollisports\.com\.br)$/.test(host)
+  const isShopHost = PROXIED_HOSTS.includes(host)
   return isShopHost ? `/api/image-proxy?url=${encodeURIComponent(absolute)}` : absolute
 }
 
