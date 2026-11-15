@@ -51,6 +51,10 @@ After a search, the chat can act on the products it just showed. Every answer is
 
 The product detail view also draws the price history as a line chart. Logic lives in `app/chat_tools.py`.
 
+![Comparison table in the chat](@site/static/img/screenshots/chat-compare.png)
+
+![Product detail with price history chart](@site/static/img/screenshots/product-detail.png)
+
 ## On mobile
 
 ![Chat on a phone](@site/static/img/screenshots/chat-mobile.png)

@@ -8,7 +8,7 @@ const sidebars: SidebarsConfig = {
       type: 'category',
       label: 'System',
       collapsed: false,
-      items: ['architecture', 'api', 'chat-search', 'configuration'],
+      items: ['how-it-works', 'architecture', 'api', 'chat-search', 'configuration'],
     },
     {
       type: 'category',
