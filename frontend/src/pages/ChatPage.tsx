@@ -8,6 +8,13 @@ import TypingIndicator from '../components/TypingIndicator'
 
 const SESSION_ID = crypto.randomUUID()
 
+// Follow-ups that act on the products the last answer showed.
+const FOLLOW_UPS = [
+  { label: 'Comparar os 3 primeiros', text: 'compare os 3 primeiros' },
+  { label: 'Qual o mais barato?', text: 'qual o mais barato?' },
+  { label: 'Histórico de preço', text: 'mostre o histórico de preço' },
+]
+
 const SUGGESTIONS = [
   'quero um tênis',
   'chuteiras nike',
@@ -106,6 +113,7 @@ export default function ChatPage() {
         text: data.reply,
         products: data.products,
         filtersApplied: data.filters_applied,
+        comparison: data.comparison,
         timestamp: new Date(),
       }
       setMessages((prev) => [...prev, botMsg])
@@ -175,6 +183,21 @@ export default function ChatPage() {
             <Welcome onSuggest={(s) => sendMessage(s)} />
           ) : (
             messages.map((msg) => <ChatBubble key={msg.id} message={msg} />)
+          )}
+
+          {!isLoading && (messages[messages.length - 1]?.products?.length ?? 0) > 0 && (
+            <div className="ml-11 flex flex-wrap gap-2">
+              {FOLLOW_UPS.map((f) => (
+                <button
+                  key={f.text}
+                  onClick={() => sendMessage(f.text)}
+                  className="text-xs bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-50
+                             rounded-full px-3 py-1.5 transition-colors duration-150"
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
           )}
 
           {isLoading && <TypingIndicator />}

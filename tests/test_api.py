@@ -427,3 +427,55 @@ def test_chat_endpoint_stock_flag_roundtrip(client, db_session):
         if p["available"]:
             assert p["status"] == "active"
 
+
+
+def _seed_priced(db_session, specs):
+    from decimal import Decimal
+
+    from app.models import Product
+
+    for pid, name, price in specs:
+        db_session.add(
+            Product(
+                id=pid, slug=f"p-{pid}", url=f"https://www.tivolli.com.br/p-{pid}", name=name,
+                price=Decimal(price), available=True, sizes=["40"], brand="Nike", view_count=pid,
+            )
+        )
+    db_session.commit()
+
+
+def test_chat_compare_and_cheapest_use_previous_results(client, db_session):
+    _seed_priced(db_session, [(9101, "Bola Nike Alfa", "300.00"), (9102, "Bola Nike Beta", "199.90")])
+    sid = "cmp-session"
+    first = client.post("/api/chat", json={"message": "bola nike", "session_id": sid}).json()
+    assert len(first["products"]) >= 2
+
+    cheap = client.post("/api/chat", json={"message": "qual o mais barato?", "session_id": sid}).json()
+    assert float(cheap["products"][0]["price"]) == 199.9
+
+    cmp = client.post("/api/chat", json={"message": "compare os dois primeiros", "session_id": sid}).json()
+    assert cmp["comparison"]["cheapest_id"] == 9102
+    assert len(cmp["products"]) == 2
+    assert "mais barato" in cmp["reply"]
+
+
+def test_chat_history_reports_price_range(client, db_session):
+    from datetime import UTC, datetime, timedelta
+    from decimal import Decimal
+
+    from app.models import ProductHistory
+
+    _seed_priced(db_session, [(9201, "Bola Nike Campo", "100.00")])
+    now = datetime.now(UTC)
+    for days, price in ((10, "150.00"), (5, "120.00")):
+        db_session.add(ProductHistory(product_id=9201, price=Decimal(price), available=True, scraped_at=now - timedelta(days=days)))
+    db_session.commit()
+    sid = "hist-session"
+    client.post("/api/chat", json={"message": "bola nike", "session_id": sid})
+    reply = client.post("/api/chat", json={"message": "mostre o histórico de preço", "session_id": sid}).json()["reply"]
+    assert "menor já registrado" in reply and "-33.3%" in reply
+
+
+def test_chat_command_without_previous_search_asks_for_a_search(client):
+    reply = client.post("/api/chat", json={"message": "compare", "session_id": "fresh-one"}).json()["reply"]
+    assert "faça uma busca" in reply.lower()

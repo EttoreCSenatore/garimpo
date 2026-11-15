@@ -39,6 +39,18 @@ Neutral searches (balls, rackets, accessories) get no questions.
 
 The parser is plain Python (regular expressions and dictionaries) in `app/search/intent_parser.py`, covered by unit tests.
 
+## Follow-up tools
+
+After a search, the chat can act on the products it just showed. Every answer is computed from the database (prices, sizes, recorded price history), never generated, and the follow-up buttons under the results send these messages:
+
+| Say | What happens |
+| --- | --- |
+| `compare os 3 primeiros` | Side-by-side table: price, instalments, sizes, stock, and the cheapest one highlighted. |
+| `qual o mais barato?` | The cheapest in-stock products among the previous results. |
+| `mostre o histórico de preço` | Current, lowest and highest recorded price and the change since the first record. |
+
+The product detail view also draws the price history as a line chart. Logic lives in `app/chat_tools.py`.
+
 ## On mobile
 
 ![Chat on a phone](@site/static/img/screenshots/chat-mobile.png)

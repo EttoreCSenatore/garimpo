@@ -1,6 +1,55 @@
 import type { ReactNode } from 'react'
 import type { ChatMessage } from '../types'
 import ProductCard from './ProductCard'
+import { formatPrice, installmentsLabel } from '../lib'
+import type { Comparison } from '../types'
+
+function ComparisonTable({ comparison }: { comparison: Comparison }) {
+  const rows = comparison.rows
+  return (
+    <div className="ml-11 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+      <table className="w-full text-xs text-left">
+        <thead className="bg-slate-50 text-slate-500">
+          <tr>
+            <th className="px-3 py-2 font-medium"></th>
+            {rows.map((r) => (
+              <th key={r.id} className="px-3 py-2 font-medium align-top min-w-40">{r.name}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100 text-slate-700">
+          <tr>
+            <td className="px-3 py-2 text-slate-500">Preço</td>
+            {rows.map((r) => (
+              <td key={r.id} className={`px-3 py-2 font-semibold ${r.cheapest ? 'text-emerald-600' : ''}`}>
+                {formatPrice(r.price == null ? null : Number(r.price))}
+                {r.cheapest && <span className="ml-1 text-[10px] font-medium">mais barato</span>}
+              </td>
+            ))}
+          </tr>
+          <tr>
+            <td className="px-3 py-2 text-slate-500">Parcelas</td>
+            {rows.map((r) => (
+              <td key={r.id} className="px-3 py-2">{installmentsLabel({ installments: r.installments } as never) ?? '—'}</td>
+            ))}
+          </tr>
+          <tr>
+            <td className="px-3 py-2 text-slate-500">Tamanhos</td>
+            {rows.map((r) => (
+              <td key={r.id} className="px-3 py-2">{r.sizes.length ? r.sizes.join(', ') : '—'}</td>
+            ))}
+          </tr>
+          <tr>
+            <td className="px-3 py-2 text-slate-500">Estoque</td>
+            {rows.map((r) => (
+              <td key={r.id} className="px-3 py-2">{r.available ? 'Em estoque' : 'Indisponível'}</td>
+            ))}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  )
+}
 
 /** Renders the small markdown subset the API uses (**bold**, newlines) as React nodes, never raw HTML. */
 function renderRichText(text: string): ReactNode[] {
@@ -50,6 +99,10 @@ export default function ChatBubble({ message }: ChatBubbleProps) {
           {renderRichText(message.text)}
         </div>
       </div>
+
+      {message.comparison && message.comparison.rows.length > 1 && (
+        <ComparisonTable comparison={message.comparison} />
+      )}
 
       {/* Product grid */}
       {message.products && message.products.length > 0 && (

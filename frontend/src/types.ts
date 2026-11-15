@@ -19,12 +19,30 @@ export interface Product {
   scraped_at: string
 }
 
+export interface ComparisonRow {
+  id: number
+  name: string
+  brand?: string | null
+  price?: number | string | null
+  price_boleto?: number | string | null
+  installments?: { count: number; value: number; interest_free: boolean } | null
+  sizes: string[]
+  available: boolean
+  cheapest: boolean
+}
+
+export interface Comparison {
+  rows: ComparisonRow[]
+  cheapest_id: number | null
+}
+
 export interface ChatMessage {
   id: string
   role: 'user' | 'bot'
   text: string
   products?: Product[]
   filtersApplied?: Record<string, unknown>
+  comparison?: Comparison | null
   timestamp: Date
 }
 
@@ -32,4 +50,5 @@ export interface ChatApiResponse {
   reply: string
   filters_applied: Record<string, unknown>
   products: Product[]
+  comparison?: Comparison | null
 }

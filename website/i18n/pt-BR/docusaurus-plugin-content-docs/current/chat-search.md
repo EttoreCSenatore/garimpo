@@ -39,6 +39,18 @@ Buscas neutras (bolas, raquetes, acessórios) não recebem perguntas.
 
 O interpretador é Python puro (expressões regulares e dicionários) em `app/search/intent_parser.py`, coberto por testes unitários.
 
+## Ferramentas de acompanhamento
+
+Depois de uma busca, o chat age sobre os produtos que acabou de mostrar. Toda resposta é calculada a partir do banco (preços, tamanhos, histórico de preços registrado), nunca gerada, e os botões sob os resultados enviam estas mensagens:
+
+| Diga | O que acontece |
+| --- | --- |
+| `compare os 3 primeiros` | Tabela lado a lado: preço, parcelas, tamanhos, estoque e o mais barato destacado. |
+| `qual o mais barato?` | Os produtos mais baratos em estoque entre os resultados anteriores. |
+| `mostre o histórico de preço` | Preço atual, menor e maior já registrados e a variação desde o primeiro registro. |
+
+A tela de detalhes do produto também desenha o histórico de preços em um gráfico de linha. A lógica fica em `app/chat_tools.py`.
+
 ## No celular
 
 ![Chat no celular](@site/static/img/screenshots/chat-mobile.png)
