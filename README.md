@@ -25,9 +25,21 @@ It is a rate-limited catalog scraper, FastAPI REST API and conversational search
 - **Freshness**: full refresh every 6 h, the 200 most viewed products every 15 min, and a background refresh when a product older than 5 min is viewed
 - **REST API**: FastAPI with OpenAPI docs, cursor pagination, filters, price history and HTTP cache headers
 - **Full-text search**: SQLite FTS5 over name, brand, category and slug; accent- and order-insensitive, prefix matching, BM25 ranking
-- **Chat search**: a rule-based intent parser (Portuguese and English, no LLM or API keys) that asks for gender and shoe size when needed
+- **Chat search**: a rule-based intent parser (Portuguese and English, no LLM or API keys) that asks for gender and shoe size when needed, then answers follow-ups from the database: compare products, cheapest in stock, price history
+- **Price history**: every real price change is recorded and drawn as a chart in the product view
+- **Scraper canary**: a weekly live check that fails when the store's markup changes
 - **Structured events**: scrape runs, price changes and errors as JSON logs, ready for any log collector
 - **Secure defaults**: SSRF-safe image proxy, admin token required in production, strict CORS, rate limits, non-root read-only container
+
+## Try it in one command
+
+Demo data, no scraping, throwaway database (needs Python 3.12+ and Node.js):
+
+```bash
+./scripts/demo.sh
+```
+
+Open http://localhost:5173 and try *tênis de corrida*, answer the two questions, then press **Comparar os 3 primeiros**. How the design hangs together: [How it works](https://ettorecsenatore.github.io/garimpo/how-it-works).
 
 ## Quick start
 

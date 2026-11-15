@@ -22,6 +22,8 @@ const PROXIED_HOSTS = ['www.tivolli.com.br']
 /** Shop images go through the API's SSRF-safe proxy (same origin, cacheable); others load directly. */
 export function getImageUrl(url?: string | null): string | undefined {
   if (!url) return undefined
+  // Demo data (python -m app.seed) ships self-contained SVG images; <img> never runs their scripts.
+  if (url.startsWith('data:image/svg+xml')) return url
   const absolute = safeHttpUrl(url.startsWith('//') ? `https:${url}` : url)
   if (!absolute) return undefined
   const isShopHost = PROXIED_HOSTS.includes(new URL(absolute).hostname)

@@ -479,3 +479,17 @@ def test_chat_history_reports_price_range(client, db_session):
 def test_chat_command_without_previous_search_asks_for_a_search(client):
     reply = client.post("/api/chat", json={"message": "compare", "session_id": "fresh-one"}).json()["reply"]
     assert "faça uma busca" in reply.lower()
+
+
+def test_seed_creates_price_history_for_demo(client):
+    from sqlmodel import select
+
+    from app.db import session_scope
+    from app.models import ProductHistory
+    from app.seed import seed_database
+
+    seed_database()
+    with session_scope() as session:
+        rows = session.exec(select(ProductHistory).where(ProductHistory.product_id == 1001)).all()
+    assert len(rows) >= 3
+    assert len({r.price for r in rows}) > 1

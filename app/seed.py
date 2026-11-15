@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import urllib.parse
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.db import engine, init_db
-from app.models import Product, ProductStatus, ScrapeRun
+from app.models import Product, ProductHistory, ProductStatus, ScrapeRun
 
 
 def make_svg(brand: str, model: str, category: str, c1: str, c2: str, icon: str = "shoe") -> str:
@@ -274,6 +274,30 @@ SAMPLE_PRODUCTS = [
 ]
 
 
+# Deterministic demo price history: (days ago, factor of today's price), oldest first.
+_HISTORY_SHAPES = [
+    [(60, 1.18), (45, 1.12), (30, 1.12), (14, 1.05), (3, 1.0)],
+    [(60, 0.92), (40, 0.95), (21, 1.0), (7, 1.0)],
+    [(55, 1.25), (35, 1.2), (20, 1.1), (6, 1.1), (1, 1.0)],
+]
+
+
+def _seed_history(session: Session, now: datetime) -> None:
+    """Replace demo history so charts and the chat's price-history answers have data."""
+    for index, item in enumerate(SAMPLE_PRODUCTS):
+        if item.get("price") is None:
+            continue
+        for old in session.exec(select(ProductHistory).where(ProductHistory.product_id == item["id"])).all():
+            session.delete(old)
+        for days, factor in _HISTORY_SHAPES[index % len(_HISTORY_SHAPES)]:
+            price = (Decimal(item["price"]) * Decimal(str(factor))).quantize(Decimal("0.01"))
+            session.add(
+                ProductHistory(
+                    product_id=item["id"], price=price, available=True, scraped_at=now - timedelta(days=days)
+                )
+            )
+
+
 def seed_database(force: bool = False) -> int:
     init_db()
     with Session(engine, expire_on_commit=False) as session:
@@ -288,6 +312,9 @@ def seed_database(force: bool = False) -> int:
             else:
                 p = Product(**item, scraped_at=now, created_at=now, updated_at=now)
                 session.add(p)
+
+        session.flush()
+        _seed_history(session, now)
 
         # Record a successful scrape run so stats and health check show last_refresh
         run = ScrapeRun(
