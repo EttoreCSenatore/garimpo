@@ -178,6 +178,39 @@ def test_chat_rate_limit(client, monkeypatch):
     security.chat_rate_limit._hits.clear()
 
 
+def test_rate_limit_ignores_spoofed_forwarded_for(client, monkeypatch):
+    """With a trusted proxy, only the entry the proxy appended (rightmost) identifies the client."""
+    from app import security
+
+    monkeypatch.setattr(settings, "trust_proxy_headers", True)
+    monkeypatch.setattr(settings, "trusted_proxy_hops", 1)
+    monkeypatch.setattr(settings, "chat_rate_limit_per_minute", 3)
+    security.chat_rate_limit._hits.clear()
+    codes = [
+        client.post(
+            "/api/chat",
+            json={"message": "oi"},
+            # The attacker rotates the leftmost value; the proxy appends the real address.
+            headers={"X-Forwarded-For": f"10.0.0.{i}, 203.0.113.9"},
+        ).status_code
+        for i in range(5)
+    ]
+    assert codes == [200, 200, 200, 429, 429]
+    security.chat_rate_limit._hits.clear()
+
+
+def test_forwarded_for_with_too_few_entries_falls_back_to_peer(monkeypatch):
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(settings, "trust_proxy_headers", True)
+    monkeypatch.setattr(settings, "trusted_proxy_hops", 2)
+    limiter = RateLimiter("t", lambda: 1)
+    request = SimpleNamespace(headers={"x-forwarded-for": "198.51.100.1"}, client=SimpleNamespace(host="192.0.2.5"))
+    assert limiter._client_key(request) == "192.0.2.5"
+    request.headers = {"x-forwarded-for": "198.51.100.1, 203.0.113.7"}
+    assert limiter._client_key(request) == "198.51.100.1"
+
+
 def test_rate_limiter_zero_disables():
     limiter = RateLimiter("t", lambda: 0)
     assert limiter.limit_getter() == 0

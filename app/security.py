@@ -79,7 +79,10 @@ class RateLimiter:
         if settings.trust_proxy_headers:
             forwarded = request.headers.get("x-forwarded-for")
             if forwarded:
-                return forwarded.split(",")[0].strip()
+                # Trusted proxies append to the right; anything to the left is client-controlled.
+                hops = [h.strip() for h in forwarded.split(",") if h.strip()]
+                if len(hops) >= max(1, settings.trusted_proxy_hops):
+                    return hops[-max(1, settings.trusted_proxy_hops)]
         return request.client.host if request.client else "unknown"
 
     async def __call__(self, request: Request) -> None:

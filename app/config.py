@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     image_rate_limit_per_minute: int = 240
     # Set when running behind a trusted reverse proxy so X-Forwarded-For is used.
     trust_proxy_headers: bool = False
+    # How many trusted proxies sit in front of the app. The client address is the entry that many
+    # places from the END of X-Forwarded-For (earlier entries are client-supplied and spoofable).
+    trusted_proxy_hops: int = 1
 
     chat_max_message_length: int = 500
     chat_max_sessions: int = 5000
