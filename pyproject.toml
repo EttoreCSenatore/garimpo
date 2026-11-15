@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "garimpo"
 version = "1.0.0"
-description = "Garimpo: catalog scraper, REST API and chat search for a Brazilian sports store, with Splunk HEC forwarding"
+description = "Garimpo: catalog scraper, REST API and chat search for a Brazilian sports store"
 requires-python = ">=3.12"
 dependencies = [
     "httpx[http2]>=0.27",

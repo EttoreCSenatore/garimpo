@@ -14,13 +14,13 @@ from pydantic import BaseModel, Field
 from sqlalchemy import update
 from sqlmodel import Session, String, and_, cast, func, or_, select
 
-from app.api.dependencies import get_db, get_splunk, require_admin
+from app.api.dependencies import get_db, require_admin
 from app.config import settings
+from app.events import emit
 from app.models import Category, Product, ProductHistory, ProductStatus, ScrapeRun
 from app.search.fts import fts_available, match_all, match_any, ranked_matches
 from app.search.intent_parser import ParsedIntent, parse_intent
 from app.security import chat_rate_limit, image_rate_limit, resolve_allowed_url
-from app.splunk_hec import SplunkHECLogger
 from app.state import MAX_INFLIGHT_SINGLE, active_workers, inflight_single, spawn
 
 router = APIRouter()
@@ -189,7 +189,6 @@ async def get_product(
     product_id: int,
     response: Response,
     db: Session = Depends(get_db),
-    splunk: SplunkHECLogger = Depends(get_splunk),
 ):
     product = db.get(Product, product_id)
     if not product:
@@ -298,12 +297,11 @@ async def get_stats(response: Response, db: Session = Depends(get_db)):
 @router.post("/admin/refresh", tags=["admin"])
 async def trigger_full_refresh(
     _: str = Depends(require_admin),
-    splunk: SplunkHECLogger = Depends(get_splunk),
 ):
     from app.tasks import run_full_refresh_async
 
     spawn(run_full_refresh_async())
-    await splunk.send({"event_type": "garimpo.run.manual_trigger", "run_type": "full"})
+    emit({"event_type": "garimpo.run.manual_trigger", "run_type": "full"})
     return {"status": "started", "message": "Atualização completa iniciada"}
 
 
@@ -311,14 +309,13 @@ async def trigger_full_refresh(
 async def refresh_single_product(
     product_id: int,
     _: str = Depends(require_admin),
-    splunk: SplunkHECLogger = Depends(get_splunk),
 ):
     from app.tasks import refresh_single_product_async
 
     if product_id not in inflight_single:
         inflight_single.add(product_id)
         spawn(refresh_single_product_async(product_id))
-    await splunk.send(
+    emit(
         {"event_type": "garimpo.run.manual_trigger", "run_type": "single", "product_id": product_id}
     )
     return {"status": "started", "message": f"Atualização iniciada para o produto {product_id}"}

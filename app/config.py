@@ -52,12 +52,6 @@ class Settings(BaseSettings):
     chat_max_message_length: int = 500
     chat_max_sessions: int = 5000
 
-    splunk_hec_url: str = "https://localhost:8088/services/collector/event"
-    splunk_hec_token: str = ""
-    splunk_hec_verify_ssl: bool = True
-    splunk_hec_batch_size: int = 50
-    splunk_buffer_file: str = "events.jsonl"
-    splunk_buffer_max_lines: int = 10000
 
     scheduler_enabled: bool = True
     full_refresh_interval_minutes: int = 360

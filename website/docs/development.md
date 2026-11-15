@@ -8,7 +8,7 @@ title: Development
 ## Layout
 
 ```text
-app/            FastAPI app, scraper, search, Splunk client
+app/            FastAPI app, scraper, search, event logging
 frontend/       React + Vite + Tailwind chat UI
 tests/          pytest suite (HTTP mocked with respx)
 website/        This documentation (Docusaurus, English + Brazilian Portuguese)
@@ -28,7 +28,7 @@ CI runs the same checks plus `pip-audit`, `npm audit` and a Docker build; CodeQL
 ## Testing notes
 
 - `tests/conftest.py` sets a temporary database, disables the scheduler and clears rate limiters between tests.
-- Scraper tests use saved HTML fixtures in `tests/fixtures/`; Splunk and image-proxy tests use `respx`.
+- Scraper tests use saved HTML fixtures in `tests/fixtures/`; image-proxy tests use `respx`.
 - Never add a test that hits the real site.
 
 ## Documentation

@@ -7,12 +7,12 @@ from sqlmodel import select
 
 from app.config import settings
 from app.db import session_scope
+from app.events import emit
 from app.models import Category, Product, ProductHistory, ProductStatus, ScrapeRun
 from app.scraper.categories import discover_categories
 from app.scraper.client import RateLimitedClient
 from app.scraper.listings import crawl_category
 from app.scraper.products import fetch_and_parse_product, infer_brand
-from app.splunk_hec import get_hec_logger
 from app.state import active_workers, get_run_lock, inflight_single
 
 logger = structlog.get_logger()
@@ -109,9 +109,8 @@ def _save_product(data: dict) -> tuple[Product, bool]:
 
 
 async def _emit_product_events(product: Product, changed: bool, disappeared: bool = False) -> None:
-    hec = get_hec_logger()
     if disappeared:
-        await hec.send(
+        emit(
             {
                 "event_type": "garimpo.product.disappeared",
                 "id": product.id,
@@ -121,7 +120,7 @@ async def _emit_product_events(product: Product, changed: bool, disappeared: boo
         )
         return
 
-    await hec.send(
+    emit(
         {
             "event_type": "garimpo.product.scraped",
             "id": product.id,
@@ -132,7 +131,7 @@ async def _emit_product_events(product: Product, changed: bool, disappeared: boo
     )
 
     if changed:
-        await hec.send(
+        emit(
             {
                 "event_type": "garimpo.product.updated",
                 "id": product.id,
@@ -146,7 +145,6 @@ async def _emit_product_events(product: Product, changed: bool, disappeared: boo
 async def refresh_single_product_async(product_id: int) -> None:
     active_workers["single"] += 1
     client = RateLimitedClient()
-    hec = get_hec_logger()
     try:
         with session_scope() as session:
             product = session.get(Product, product_id)
@@ -170,7 +168,7 @@ async def refresh_single_product_async(product_id: int) -> None:
             await _emit_product_events(saved, changed)
     except Exception as exc:
         logger.error("task.refresh_single.error", product_id=product_id, error=str(exc))
-        await hec.send(
+        emit(
             {"event_type": "garimpo.error.http", "product_id": product_id, "error": str(exc)}
         )
     finally:
@@ -182,7 +180,6 @@ async def refresh_single_product_async(product_id: int) -> None:
 async def _run_full_refresh() -> None:
     active_workers["full"] += 1
     client = RateLimitedClient()
-    hec = get_hec_logger()
     run = ScrapeRun(run_type="full", status="running")
     with session_scope() as session:
         session.add(run)
@@ -196,7 +193,7 @@ async def _run_full_refresh() -> None:
     start = datetime.now(UTC)
 
     try:
-        await hec.send({"event_type": "garimpo.run.started", "run_id": run_id, "run_type": "full"})
+        emit({"event_type": "garimpo.run.started", "run_id": run_id, "run_type": "full"})
 
         categories = await discover_categories(client)
         all_product_urls: list[tuple[str, int | None]] = []
@@ -249,7 +246,7 @@ async def _run_full_refresh() -> None:
                 session.add(r)
                 session.commit()
 
-        await hec.send(
+        emit(
             {
                 "event_type": "garimpo.run.completed",
                 "run_id": run_id,
@@ -270,19 +267,17 @@ async def _run_full_refresh() -> None:
                 r.error_message = str(exc)
                 session.add(r)
                 session.commit()
-        await hec.send(
+        emit(
             {"event_type": "garimpo.error.http", "run_id": run_id, "error": str(exc)}
         )
     finally:
         active_workers["full"] -= 1
         await client.close()
-        await hec.flush()
 
 
 async def _run_incremental_refresh() -> None:
     active_workers["incremental"] += 1
     client = RateLimitedClient()
-    hec = get_hec_logger()
     run = ScrapeRun(run_type="incremental", status="running")
     with session_scope() as session:
         session.add(run)
@@ -331,7 +326,7 @@ async def _run_incremental_refresh() -> None:
                 session.add(r)
                 session.commit()
 
-        await hec.send(
+        emit(
             {
                 "event_type": "garimpo.run.completed",
                 "run_id": run_id,
@@ -354,7 +349,6 @@ async def _run_incremental_refresh() -> None:
     finally:
         active_workers["incremental"] -= 1
         await client.close()
-        await hec.flush()
 
 
 async def _run_exclusive(kind: str, runner) -> None:

@@ -8,16 +8,11 @@ from sqlmodel import Session
 from app.config import settings
 from app.db import engine
 from app.security import tokens_match
-from app.splunk_hec import SplunkHECLogger, get_hec_logger
 
 
 def get_db() -> Generator[Session, None, None]:
     with Session(engine) as session:
         yield session
-
-
-def get_splunk() -> SplunkHECLogger:
-    return get_hec_logger()
 
 
 def require_admin(x_admin_token: str | None = Header(default=None)) -> str:

@@ -25,7 +25,7 @@ The screenshots in this documentation use generic demo products (`python -m app.
 | **REST API** | FastAPI service with cursor pagination, filters, price history and OpenAPI docs. |
 | **Chat search** | A rule-based intent parser (no LLM, no API keys) turns a sentence into database filters and asks for gender and shoe size when needed. |
 | **Frontend** | React + TypeScript + Tailwind chat UI that renders products as cards. |
-| **Observability** | Structured logs and Splunk HEC forwarding with an on-disk buffer when Splunk is unreachable. |
+| **Observability** | Structured JSON logs and domain events (scrape runs, price changes, errors) on stdout, ready for any log collector. |
 
 ## Highlights
 
