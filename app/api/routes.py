@@ -10,10 +10,12 @@ from uuid import uuid4
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, Field
 from sqlalchemy import update
 from sqlmodel import Session, String, and_, cast, func, or_, select
 
+from app import chat_tools
 from app.api.dependencies import get_db, require_admin
 from app.config import settings
 from app.events import emit
@@ -39,6 +41,7 @@ class ChatResponse(BaseModel):
     reply: str
     filters_applied: dict
     products: list[dict]
+    comparison: dict | None = None
 
 
 # Estado das sessões de chat para o fluxo de compra guiado (em memória, por
@@ -215,6 +218,7 @@ async def get_product(
 
 
 @router.get("/products/{product_id}/history", tags=["products"])
+@router.get("/api/products/{product_id}/history", tags=["products"], include_in_schema=False)
 async def get_product_history(
     product_id: int,
     response: Response,
@@ -568,6 +572,38 @@ async def chat(
 
     # --- Estado da sessão: preferências persistem entre mensagens ---------
     session = _get_chat_session(payload.session_id)
+
+    # --- Follow-up commands act on the previous results (compare, cheapest, history) ---
+    command = None if (intent.category_keywords or intent.brand) else chat_tools.detect_command(payload.message)
+    if command and session.get("last_ids"):
+        shown = chat_tools.load_products(db, session["last_ids"])
+        if command.kind == "compare" and len(shown) >= 2:
+            picked = shown[: command.count]
+            return ChatResponse(
+                reply=chat_tools.compare_reply(picked),
+                filters_applied={"compare": [p.id for p in picked]},
+                products=[_apply_disclaimer(p.model_dump()) for p in picked],
+                comparison=jsonable_encoder(chat_tools.compare(picked)),
+            )
+        if command.kind == "cheapest" and shown:
+            reply, top = chat_tools.cheapest_reply(shown)
+            return ChatResponse(
+                reply=reply,
+                filters_applied={"sort": "price"},
+                products=[_apply_disclaimer(p.model_dump()) for p in top],
+            )
+        if command.kind == "history" and shown:
+            return ChatResponse(
+                reply=chat_tools.history_reply(db, shown[0]),
+                filters_applied={"history": shown[0].id},
+                products=[_apply_disclaimer(shown[0].model_dump())],
+            )
+    elif command and not session.get("last_ids"):
+        return ChatResponse(
+            reply="Primeiro faça uma busca (ex.: **tênis nike**) e depois peça para eu comparar ou mostrar o mais barato.",
+            filters_applied={},
+            products=[],
+        )
     prefs: dict = session["prefs"]
     declined: dict = session["declined"]
 
@@ -807,6 +843,7 @@ async def chat(
                 "então ampliei a busca."
             )
 
+    session["last_ids"] = [p.id for p in products]
     return ChatResponse(
         reply=reply,
         filters_applied=filters_applied,
