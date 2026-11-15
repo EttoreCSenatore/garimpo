@@ -49,3 +49,7 @@ The docs are deployed to GitHub Pages by `.github/workflows/docs.yml` on every p
 
 Screenshots live in `website/static/img/screenshots/` and use demo data (`python -m app.seed`) so no third-party
 product images are published.
+
+## Scraper canary
+
+A weekly workflow (`.github/workflows/canary.yml`, also runnable with `python -m app.canary`) makes about four polite requests to the real store and checks that categories, product links, name, price, images and sizes still parse. If the store changes its markup it fails within days, instead of a scrape silently returning nothing.
