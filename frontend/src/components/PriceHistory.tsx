@@ -48,8 +48,8 @@ export default function PriceHistory({ productId }: { productId: number }) {
   return (
     <div>
       <p className="text-xs font-semibold text-slate-500 mb-1">Histórico de preço</p>
-      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-16" role="img" aria-label="Gráfico do histórico de preço">
-        <polyline points={coords.join(' ')} fill="none" stroke="#4f46e5" strokeWidth="2" strokeLinejoin="round" />
+      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="w-full h-16" role="img" aria-label="Gráfico do histórico de preço">
+        <polyline points={coords.join(' ')} fill="none" stroke="#4f46e5" strokeWidth="2" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       </svg>
       <p className="text-xs text-slate-500">
         Menor {formatPrice(min)} · maior {formatPrice(max)}

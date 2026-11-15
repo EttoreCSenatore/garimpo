@@ -51,6 +51,10 @@ Depois de uma busca, o chat age sobre os produtos que acabou de mostrar. Toda re
 
 A tela de detalhes do produto também desenha o histórico de preços em um gráfico de linha. A lógica fica em `app/chat_tools.py`.
 
+![Tabela de comparação no chat](@site/static/img/screenshots/chat-compare.png)
+
+![Detalhe do produto com gráfico do histórico de preço](@site/static/img/screenshots/product-detail.png)
+
 ## No celular
 
 ![Chat no celular](@site/static/img/screenshots/chat-mobile.png)

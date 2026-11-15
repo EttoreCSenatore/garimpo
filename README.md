@@ -14,6 +14,10 @@ It is a rate-limited catalog scraper, FastAPI REST API and conversational search
 
 ![Chat search with product cards](website/static/img/screenshots/chat-results.png)
 
+| Compare products | Price history |
+| --- | --- |
+| ![Comparison](website/static/img/screenshots/chat-compare.png) | ![Detail with price chart](website/static/img/screenshots/product-detail.png) |
+
 > Screenshots use generic demo data (`python -m app.seed`), not the store's real catalog.
 
 > **Responsible use:** this software scrapes publicly available catalog data from tivolli.com.br. You **must have permission** to scrape the site before running it, and respect its `robots.txt` and terms of service. No personal data is collected. The disallowed paths `/tivadm43` and `/homologacao` are blocked in code. See [Responsible use](https://ettorecsenatore.github.io/garimpo/responsible-use).
