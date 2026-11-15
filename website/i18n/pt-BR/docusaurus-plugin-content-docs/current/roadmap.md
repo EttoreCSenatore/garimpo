@@ -28,6 +28,6 @@ Estas são as ideias restantes, aproximadamente por valor.
 
 ## Operações
 
-- **Métricas**: endpoint Prometheus (duração das coletas, falhas de leitura, tamanho da fila) junto ao Splunk.
+- **Métricas**: endpoint Prometheus (duração das coletas, falhas de leitura, tamanho da fila).
 - **Fixar e travar as dependências Python** (`pip-compile`) para imagens totalmente reproduzíveis.
 - **Automação de releases**: versões com tag, imagem de contêiner publicada e SBOM.

@@ -25,7 +25,7 @@ As capturas de tela desta documentação usam produtos genéricos de demonstraç
 | **API REST** | Serviço FastAPI com paginação por cursor, filtros, histórico de preços e documentação OpenAPI. |
 | **Busca por chat** | Um interpretador de intenção baseado em regras (sem LLM, sem chaves de API) transforma uma frase em filtros e pergunta gênero e número do calçado quando necessário. |
 | **Frontend** | Interface de chat em React + TypeScript + Tailwind que exibe os produtos como cartões. |
-| **Observabilidade** | Logs estruturados e envio ao Splunk HEC, com buffer em disco quando o Splunk está indisponível. |
+| **Observabilidade** | Logs JSON estruturados e eventos de domínio (coletas, mudanças de preço, erros) no stdout, prontos para qualquer coletor de logs. |
 
 ## Destaques
 

@@ -8,7 +8,7 @@ title: Desenvolvimento
 ## Estrutura
 
 ```text
-app/            App FastAPI, scraper, busca, cliente Splunk
+app/            App FastAPI, scraper, busca, eventos
 frontend/       Interface de chat em React + Vite + Tailwind
 tests/          Suíte pytest (HTTP simulado com respx)
 website/        Esta documentação (Docusaurus, inglês + português do Brasil)
@@ -28,7 +28,7 @@ O CI roda as mesmas verificações, além de `pip-audit`, `npm audit` e um build
 ## Notas sobre testes
 
 - `tests/conftest.py` define um banco temporário, desativa o agendador e limpa os limitadores de taxa entre os testes.
-- Os testes do scraper usam HTMLs salvos em `tests/fixtures/`; os testes de Splunk e do proxy de imagens usam `respx`.
+- Os testes do scraper usam HTMLs salvos em `tests/fixtures/`; os testes do proxy de imagens usam `respx`.
 - Nunca adicione um teste que acesse o site real.
 
 ## Documentação

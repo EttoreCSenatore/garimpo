@@ -1,77 +1,14 @@
 from __future__ import annotations
 
-import json
 import time
 from decimal import Decimal
-from pathlib import Path
 
-import httpx
 import pytest
-import respx
 from sqlmodel import select
 
 from app.db import init_db, session_scope
 from app.models import ProductHistory, ProductStatus, ScrapeRun
 from app.scraper.products import infer_brand
-from app.splunk_hec import SplunkHECLogger
-
-
-@pytest.fixture
-def hec(tmp_path):
-    return SplunkHECLogger(
-        url="https://localhost:8088/services/collector/event",
-        token="t",
-        batch_size=2,
-        verify_ssl=True,
-        buffer_file=str(tmp_path / "events.jsonl"),
-        buffer_max_lines=100,
-    )
-
-
-def _lines(path: str) -> list[dict]:
-    p = Path(path)
-    return [json.loads(line) for line in p.read_text().splitlines() if line.strip()] if p.exists() else []
-
-
-@pytest.mark.asyncio
-async def test_hec_failed_events_are_buffered_once_not_duplicated(hec):
-    with respx.mock(assert_all_called=False) as mock:
-        mock.post(hec.url).mock(return_value=httpx.Response(400))
-        for i in range(3):
-            await hec.send({"event_type": "e", "id": i})
-        await hec.flush()
-        await hec.flush()
-        await hec.send({"event_type": "e", "id": 99})
-        await hec.flush()
-    ids = [e["event"]["id"] for e in _lines(hec.buffer_file)]
-    assert sorted(ids) == [0, 1, 2, 99]
-
-
-@pytest.mark.asyncio
-async def test_hec_buffer_is_drained_after_recovery(hec):
-    with respx.mock(assert_all_called=False) as mock:
-        route = mock.post(hec.url).mock(return_value=httpx.Response(400))
-        await hec.send({"event_type": "e", "id": 1})
-        await hec.flush()
-        assert len(_lines(hec.buffer_file)) == 1
-        route.mock(return_value=httpx.Response(200, json={"text": "Success"}))
-        await hec.flush()
-        await hec.send({"event_type": "e", "id": 2})
-        await hec.flush()
-    assert _lines(hec.buffer_file) == []
-    assert not Path(hec.buffer_file).exists()
-
-
-@pytest.mark.asyncio
-async def test_hec_skips_corrupt_buffer_lines(hec):
-    Path(hec.buffer_file).write_text('{"event": {"id": 1}}\nnot json\n{"event": {"id": 2}}\n')
-    assert [e["event"]["id"] for e in hec._read_buffer_file()] == [1, 2]
-
-
-def test_hec_buffer_cap_keeps_newest(hec):
-    hec.buffer_max_lines = 3
-    hec._write_buffer_file([{"event": {"id": i}} for i in range(10)])
-    assert [e["event"]["id"] for e in _lines(hec.buffer_file)] == [7, 8, 9]
 
 
 def _product(pid: int, price: str, available: bool = True) -> dict:

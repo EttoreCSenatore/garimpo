@@ -13,7 +13,6 @@ from app.api.routes import router
 from app.config import settings
 from app.db import init_db
 from app.security import SecurityHeadersMiddleware
-from app.splunk_hec import get_hec_logger
 from app.state import spawn
 
 structlog.configure(
@@ -38,7 +37,6 @@ async def lifespan(app: FastAPI):
     if not settings.scheduler_enabled:
         logger.info("scheduler.disabled")
         yield
-        await get_hec_logger().aclose()
         return
 
     scheduler = AsyncIOScheduler()
@@ -68,8 +66,6 @@ async def lifespan(app: FastAPI):
 
     if scheduler:
         scheduler.shutdown(wait=False)
-    hec = get_hec_logger()
-    await hec.aclose()
     logger.info("app.shutdown")
 
 
@@ -85,7 +81,7 @@ async def run_incremental_refresh_job() -> None:
 
 app = FastAPI(
     title="Garimpo API",
-    description="Scraper de produtos e API REST para tivolli.com.br com integração Splunk HEC",
+    description="Scraper de produtos e API REST para tivolli.com.br",
     version="1.0.0",
     lifespan=lifespan,
 )

@@ -18,7 +18,7 @@ O arquivo compose já vem endurecido:
 - a porta é publicada **somente em 127.0.0.1**; coloque um proxy reverso com TLS na frente para acesso público
 - `ADMIN_TOKEN` é obrigatório (sem valor padrão), e `APP_ENV=production` rejeita tokens fracos na inicialização
 - o contêiner roda como **usuário sem privilégios**, com **sistema de arquivos raiz somente leitura**, todas as capabilities removidas e `no-new-privileges`
-- o estado fica no volume `garimpo_data` (`/app/data`): o banco SQLite e o buffer do Splunk
+- o estado fica no volume `garimpo_data` (`/app/data`): o banco SQLite
 - o health check chama `/api/health` com Python, então a imagem não contém `curl`
 
 ## Proxy reverso
@@ -42,5 +42,4 @@ O catálogo sempre pode ser reconstruído por uma atualização completa, mas o 
 - [ ] `ADMIN_TOKEN` forte, guardado no seu gerenciador de segredos
 - [ ] TLS na frente, porta não exposta publicamente
 - [ ] `USER_AGENT` identifica você; você tem permissão para coletar dados do site
-- [ ] `SPLUNK_HEC_VERIFY_SSL=true`, a menos que o Splunk seja local
 - [ ] Backups do volume de dados

@@ -28,6 +28,6 @@ These are the remaining ideas, roughly by value.
 
 ## Operations
 
-- **Metrics**: Prometheus endpoint (scrape duration, parse failures, queue depth) alongside Splunk.
+- **Metrics**: Prometheus endpoint (scrape duration, parse failures, queue depth).
 - **Pin and lock Python dependencies** (`pip-compile`) for fully reproducible images.
 - **Release automation**: tagged releases with a published container image and SBOM.

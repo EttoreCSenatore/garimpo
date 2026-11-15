@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 import structlog
 from selectolax.lexbor import LexborHTMLParser as HTMLParser
 
+from app.events import emit
 from app.models import Installments, ProductStatus
 from app.scraper.client import RateLimitedClient
 from app.security import safe_http_url
@@ -246,8 +247,7 @@ async def fetch_and_parse_product(
         return parse_product(resp.text, url, category_id)
     except Exception as exc:
         logger.error("scraper.parse_error", url=url, error=str(exc))
-        from app.splunk_hec import get_hec_logger
-        await get_hec_logger().send(
+        emit(
             {
                 "event_type": "garimpo.error.parse",
                 "url": url,

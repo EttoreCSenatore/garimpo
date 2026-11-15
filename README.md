@@ -10,7 +10,7 @@ Catalog scraper, REST API and conversational product search.
 
 *Garimpo* is Brazilian Portuguese for prospecting; *garimpar* is what you do when you hunt for a good find or a bargain. The project keeps a fresh copy of an online store's catalog and lets people dig through it in plain language.
 
-It is a rate-limited catalog scraper, FastAPI REST API and conversational search (React) for the Brazilian sports e-commerce site **tivolli.com.br** (Tivolli Sports, the store), with Splunk HEC event forwarding.
+It is a rate-limited catalog scraper, FastAPI REST API and conversational search (React) for the Brazilian sports e-commerce site **tivolli.com.br** (Tivolli Sports, the store), with structured JSON event logs.
 
 ![Chat search with product cards](website/static/img/screenshots/chat-results.png)
 
@@ -26,7 +26,7 @@ It is a rate-limited catalog scraper, FastAPI REST API and conversational search
 - **REST API**: FastAPI with OpenAPI docs, cursor pagination, filters, price history and HTTP cache headers
 - **Full-text search**: SQLite FTS5 over name, brand, category and slug; accent- and order-insensitive, prefix matching, BM25 ranking
 - **Chat search**: a rule-based intent parser (Portuguese and English, no LLM or API keys) that asks for gender and shoe size when needed
-- **Splunk HEC**: batched events with retries and an on-disk buffer while Splunk is unreachable
+- **Structured events**: scrape runs, price changes and errors as JSON logs, ready for any log collector
 - **Secure defaults**: SSRF-safe image proxy, admin token required in production, strict CORS, rate limits, non-root read-only container
 
 ## Quick start
@@ -76,7 +76,6 @@ All settings are in [.env.example](.env.example) and documented in [Configuratio
 | `REQUESTS_PER_SECOND` | `1` | Process-wide request budget |
 | `CORS_ORIGINS` | `http://localhost:5173,...` | Browser origins allowed to call the API |
 | `DATABASE_URL` | `sqlite:///./garimpo.db` | Any SQLAlchemy URL |
-| `SPLUNK_HEC_URL` / `SPLUNK_HEC_TOKEN` | local HEC / *(empty)* | Without a token, events stay in `events.jsonl` |
 | `DISCLAIMER` | `false` | Mark prices as indicative and add `source_url` |
 
 ## API
@@ -114,24 +113,15 @@ Chat replies are in Portuguese, for example:
 
 More in [REST API](https://ettorecsenatore.github.io/garimpo/api) and [Chat search](https://ettorecsenatore.github.io/garimpo/chat-search).
 
-## Splunk Free
+## Logs and events
 
-1. In Splunk: **Settings → Data Inputs → HTTP Event Collector → New Token**, named `garimpo`. Leave **Indexer Acknowledgment disabled**: the client does not send a channel id, which acknowledgment requires.
-2. Put the token in `.env` as `SPLUNK_HEC_TOKEN`.
-3. Only for a local Splunk with a self-signed certificate, set `SPLUNK_HEC_VERIFY_SSL=false`. Keep it `true` (the default) otherwise.
+Everything is logged as JSON lines on stdout (`docker logs`, or any collector). Domain events use the `garimpo.*` names as the log message, for example:
 
-```
-sourcetype=garimpo | stats count by event_type | sort -count
+```json
+{"event": "garimpo.run.completed", "run_id": 26, "products_scraped": 412, "products_failed": 3, "timestamp": "2026-11-14T21:00:00Z"}
 ```
 
-Alert when more than 5% of products disappear in a run:
-
-```
-sourcetype=garimpo event_type=garimpo.run.completed products_scraped>0
-| eval disappear_pct = (products_disappeared / products_scraped) * 100
-| where disappear_pct > 5
-| table _time run_id products_scraped products_disappeared disappear_pct
-```
+Event names: `garimpo.run.started|completed`, `garimpo.product.scraped|updated|disappeared`, `garimpo.error.parse|http`.
 
 ## Project structure
 
@@ -143,7 +133,7 @@ app/
   state.py           Process-wide runtime state and background tasks
   db.py, models.py   SQLModel engine (SQLite WAL), indexes, tables
   tasks.py           Full / incremental / single refresh jobs
-  splunk_hec.py      Splunk HEC client with on-disk buffer
+  events.py          Structured domain events (JSON logs)
   seed.py            Demo data (python -m app.seed)
   scraper/           Rate-limited client, categories, listings, product parser
   search/            Intent parser for the chat, FTS5 index and ranking

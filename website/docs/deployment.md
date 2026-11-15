@@ -18,7 +18,7 @@ The compose file is hardened by default:
 - the port is published on **127.0.0.1 only**; put a TLS-terminating reverse proxy in front for public access
 - `ADMIN_TOKEN` is required (no default), and `APP_ENV=production` rejects weak tokens at startup
 - the container runs as an **unprivileged user** with a **read-only root filesystem**, all capabilities dropped and `no-new-privileges`
-- state lives in the `garimpo_data` volume (`/app/data`): the SQLite database and the Splunk buffer
+- state lives in the `garimpo_data` volume (`/app/data`): the SQLite database
 - the health check calls `/api/health` with Python, so the image contains no `curl`
 
 ## Reverse proxy
@@ -42,5 +42,4 @@ The catalog can always be rebuilt by a full refresh, but price history cannot.
 - [ ] Strong `ADMIN_TOKEN`, stored in your secret manager
 - [ ] TLS in front, port not exposed publicly
 - [ ] `USER_AGENT` identifies you; you have permission to scrape the site
-- [ ] `SPLUNK_HEC_VERIFY_SSL=true` unless Splunk is local
 - [ ] Backups of the data volume

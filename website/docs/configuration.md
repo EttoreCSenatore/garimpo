@@ -39,17 +39,3 @@ Settings come from environment variables or a `.env` file (see `.env.example`). 
 | `FULL_REFRESH_INTERVAL_MINUTES` | `360` | Full crawl interval. |
 | `INCREMENTAL_REFRESH_INTERVAL_MINUTES` | `15` | Incremental interval. |
 | `INCREMENTAL_TOP_N` | `200` | Products refreshed per incremental run. |
-
-## Splunk
-
-| Variable | Default | Description |
-| --- | --- | --- |
-| `SPLUNK_HEC_URL` | `https://localhost:8088/services/collector/event` | HEC endpoint. |
-| `SPLUNK_HEC_TOKEN` | *(empty)* | Without a token events are kept in the buffer file. |
-| `SPLUNK_HEC_VERIFY_SSL` | `true` | Disable only for a local self-signed Splunk. |
-| `SPLUNK_HEC_BATCH_SIZE` | `50` | Events per request. |
-| `SPLUNK_BUFFER_FILE` / `SPLUNK_BUFFER_MAX_LINES` | `events.jsonl` / `10000` | Offline buffer location and cap (newest kept). |
-
-:::note Splunk indexer acknowledgment
-Create the HEC token with **Indexer Acknowledgment disabled**. The client does not send the channel id that acknowledgment requires, so Splunk would reject every batch.
-:::

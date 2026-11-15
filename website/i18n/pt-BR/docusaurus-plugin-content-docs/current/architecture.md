@@ -13,11 +13,10 @@ flowchart LR
       Tasks --> Scraper[Cliente com limite de taxa]
       Tasks --> DB[(SQLite, WAL)]
       API[Rotas REST + chat] --> DB
-      Tasks --> HEC[Cliente Splunk HEC]
+      Tasks --> Events[Eventos estruturados]
     end
     UI[Chat em React] -- /api --> API
-    HEC -- lotes --> Splunk[(Splunk)]
-    HEC -. buffer .-> File[events.jsonl]
+    Events -- logs JSON --> Stdout[stdout / coletor de logs]
 ```
 
 ## Módulos
@@ -31,7 +30,7 @@ flowchart LR
 | `app/search/fts.py` | Índice SQLite FTS5 (`products_fts`, sincronizado por triggers) e busca ordenada por BM25. |
 | `app/scraper/*` | Cliente HTTP com limite de taxa, descoberta de categorias, rastreador de listagens e parser de produto. |
 | `app/tasks.py` | Tarefas de atualização completa, incremental e por produto; persistência e histórico. |
-| `app/splunk_hec.py` | Cliente Splunk HEC em lotes com buffer de contingência em disco. |
+| `app/events.py` | Eventos de domínio estruturados (coletas, mudanças de produto, erros) emitidos como logs JSON. |
 | `app/security.py` | Comparação de tokens, lista de URLs permitidas, limitador de taxa, cabeçalhos de segurança. |
 | `app/state.py` | Estado de execução do processo e controle de tarefas em segundo plano. |
 
