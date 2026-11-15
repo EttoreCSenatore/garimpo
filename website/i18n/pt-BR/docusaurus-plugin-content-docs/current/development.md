@@ -49,3 +49,7 @@ A documentação é publicada no GitHub Pages por `.github/workflows/docs.yml` a
 
 As capturas ficam em `website/static/img/screenshots/` e usam dados de demonstração (`python -m app.seed`),
 para que nenhuma imagem de produto de terceiros seja publicada.
+
+## Canário do scraper
+
+Um workflow semanal (`.github/workflows/canary.yml`, também executável com `python -m app.canary`) faz cerca de quatro requisições educadas à loja real e confere se categorias, links de produto, nome, preço, imagens e tamanhos ainda são lidos. Se a loja mudar o HTML, ele falha em poucos dias, em vez de uma coleta devolver vazio em silêncio.
