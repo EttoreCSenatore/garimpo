@@ -12,6 +12,7 @@ On databases without FTS5 (for example PostgreSQL via ``DATABASE_URL``) the
 callers fall back to ``LIKE`` matching, so this module is an optimisation, not
 a requirement.
 """
+
 from __future__ import annotations
 
 import re

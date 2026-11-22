@@ -63,6 +63,7 @@ def _search(client, q):
 
 # --- query building -------------------------------------------------------
 
+
 def test_match_builders_only_emit_quoted_words():
     assert match_all('nike "air" OR NEAR(x*') == '"nike"* AND "air"* AND "or"* AND "near"* AND "x"*'
     assert match_all("%%% ---") is None
@@ -71,6 +72,7 @@ def test_match_builders_only_emit_quoted_words():
 
 
 # --- /products?q ----------------------------------------------------------
+
 
 def test_search_ignores_accents_case_and_word_order(client, engine):
     _add(
@@ -148,6 +150,7 @@ def test_falls_back_to_like_without_fts(client, engine, monkeypatch):
 
 
 # --- chat ranking -----------------------------------------------------------
+
 
 def test_chat_ranks_name_matches_above_popularity(client, engine):
     _add(

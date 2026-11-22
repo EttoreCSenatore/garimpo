@@ -32,6 +32,7 @@ router = APIRouter()
 # Chat models
 # ---------------------------------------------------------------------------
 
+
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=settings.chat_max_message_length)
     session_id: str | None = Field(default=None, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
@@ -113,10 +114,7 @@ def _apply_disclaimer(product: dict) -> dict:
 @router.get("/api/health", tags=["health"])
 async def health_check(db: Session = Depends(get_db)):
     last_run = db.exec(
-        select(ScrapeRun)
-        .where(ScrapeRun.completed_at.is_not(None))
-        .order_by(ScrapeRun.completed_at.desc())
-        .limit(1)
+        select(ScrapeRun).where(ScrapeRun.completed_at.is_not(None)).order_by(ScrapeRun.completed_at.desc()).limit(1)
     ).first()
     return {
         "status": "ok",
@@ -202,10 +200,7 @@ async def get_product(
     db.commit()
     db.refresh(product)
 
-    stale = (
-        product.scraped_at is not None
-        and (datetime.now(UTC) - _as_utc(product.scraped_at)).total_seconds() > 300
-    )
+    stale = product.scraped_at is not None and (datetime.now(UTC) - _as_utc(product.scraped_at)).total_seconds() > 300
     if stale and product_id not in inflight_single and len(inflight_single) < MAX_INFLIGHT_SINGLE:
         from app.tasks import refresh_single_product_async
 
@@ -262,28 +257,19 @@ async def list_categories(response: Response, db: Session = Depends(get_db)):
 @router.get("/stats", tags=["stats"])
 async def get_stats(response: Response, db: Session = Depends(get_db)):
     total_products = db.exec(select(func.count(Product.id))).one()
-    active_products = db.exec(
-        select(func.count(Product.id)).where(Product.status == ProductStatus.ACTIVE)
-    ).one()
+    active_products = db.exec(select(func.count(Product.id)).where(Product.status == ProductStatus.ACTIVE)).one()
 
     since = datetime.now(UTC) - timedelta(hours=24)
-    runs_24h = db.exec(
-        select(ScrapeRun).where(ScrapeRun.started_at >= since)
-    ).all()
+    runs_24h = db.exec(select(ScrapeRun).where(ScrapeRun.started_at >= since)).all()
 
     total_scraped = sum(r.products_scraped for r in runs_24h)
     total_failed = sum(r.products_failed for r in runs_24h)
     success_rate = (
-        (total_scraped / (total_scraped + total_failed) * 100)
-        if (total_scraped + total_failed) > 0
-        else 100.0
+        (total_scraped / (total_scraped + total_failed) * 100) if (total_scraped + total_failed) > 0 else 100.0
     )
 
     last_run = db.exec(
-        select(ScrapeRun)
-        .where(ScrapeRun.completed_at.is_not(None))
-        .order_by(ScrapeRun.completed_at.desc())
-        .limit(1)
+        select(ScrapeRun).where(ScrapeRun.completed_at.is_not(None)).order_by(ScrapeRun.completed_at.desc()).limit(1)
     ).first()
 
     response.headers.update(_cache_headers())
@@ -319,12 +305,8 @@ async def refresh_single_product(
     if product_id not in inflight_single:
         inflight_single.add(product_id)
         spawn(refresh_single_product_async(product_id))
-    emit(
-        {"event_type": "garimpo.run.manual_trigger", "run_type": "single", "product_id": product_id}
-    )
+    emit({"event_type": "garimpo.run.manual_trigger", "run_type": "single", "product_id": product_id})
     return {"status": "started", "message": f"Atualização iniciada para o produto {product_id}"}
-
-
 
 
 @router.get("/admin/queue", tags=["admin"])
@@ -380,7 +362,12 @@ async def proxy_image(url: str = Query(..., max_length=2048)):
                         raise HTTPException(status_code=502, detail="Falha ao buscar imagem")
 
                     declared = resp.headers.get("content-length")
-                    if declared and declared.isascii() and declared.isdigit() and int(declared) > settings.image_proxy_max_bytes:
+                    if (
+                        declared
+                        and declared.isascii()
+                        and declared.isdigit()
+                        and int(declared) > settings.image_proxy_max_bytes
+                    ):
                         raise HTTPException(status_code=502, detail="Imagem muito grande")
 
                     body = bytearray()
@@ -390,7 +377,9 @@ async def proxy_image(url: str = Query(..., max_length=2048)):
                             raise HTTPException(status_code=502, detail="Imagem muito grande")
 
                     declared_type = resp.headers.get("content-type", "").split(";")[0].strip().lower()
-                    content_type = declared_type if declared_type in _IMAGE_TYPES else _sniff_image_type(bytes(body[:16]))
+                    content_type = (
+                        declared_type if declared_type in _IMAGE_TYPES else _sniff_image_type(bytes(body[:16]))
+                    )
                     if content_type is None:
                         raise HTTPException(status_code=502, detail="Conteúdo não é uma imagem suportada")
                     return Response(
@@ -466,9 +455,7 @@ def _gender_condition(gender: str):
     }
     like = stems.get(gender, f"%{gender}%")
     conflicting = [c for c in ("%masculin%", "%feminin%", "%infantil%") if c != like]
-    not_conflicting = and_(
-        *[~Product.name.ilike(g) for g in conflicting]
-    )
+    not_conflicting = and_(*[~Product.name.ilike(g) for g in conflicting])
     return or_(Product.name.ilike(like), not_conflicting)
 
 
@@ -503,22 +490,127 @@ def _filters_applied(intent: ParsedIntent, prefs: dict) -> dict:
 
 # Palavras muito comuns que não ajudam a buscar produtos
 _STOPWORDS = {
-    "quero", "gostaria", "procurando", "procuro", "preciso", "mostrar",
-    "mostre", "ver", "tem", "temos", "tudo", "todos", "todas", "produto",
-    "produtos", "item", "itens", "loja", "site", "algum", "alguma",
-    "alguns", "algumas", "para", "com", "sem", "por", "que", "onde",
-    "quais", "qual", "sobre", "entre", "até", "ate", "abaixo", "acima",
-    "under", "below", "above", "over", "from", "between", "max", "min",
-    "de", "do", "da", "dos", "das", "no", "na", "nos", "nas", "em",
-    "um", "uma", "uns", "umas", "os", "as", "e", "ou", "ao", "aos",
-    "à", "às", "me", "meu", "minha", "você", "voce", "vocês", "voces",
-    "tamanho", "tamanhos", "número", "numero", "num", "calço", "calco",
-    "masculino", "masculina", "masculinas", "feminino", "feminina",
-    "femininas", "infantil", "unissex", "unisex", "homem", "homens",
-    "mulher", "mulheres", "menino", "menina", "meninos", "meninas",
-    "criança", "crianca", "crianças", "criancas", "ele", "ela", "how",
-    "the", "for", "and", "any", "show", "find", "oi", "olá", "ola",
-    "bom", "boa", "dia", "tarde", "noite", "hey", "hello",
+    "quero",
+    "gostaria",
+    "procurando",
+    "procuro",
+    "preciso",
+    "mostrar",
+    "mostre",
+    "ver",
+    "tem",
+    "temos",
+    "tudo",
+    "todos",
+    "todas",
+    "produto",
+    "produtos",
+    "item",
+    "itens",
+    "loja",
+    "site",
+    "algum",
+    "alguma",
+    "alguns",
+    "algumas",
+    "para",
+    "com",
+    "sem",
+    "por",
+    "que",
+    "onde",
+    "quais",
+    "qual",
+    "sobre",
+    "entre",
+    "até",
+    "ate",
+    "abaixo",
+    "acima",
+    "under",
+    "below",
+    "above",
+    "over",
+    "from",
+    "between",
+    "max",
+    "min",
+    "de",
+    "do",
+    "da",
+    "dos",
+    "das",
+    "no",
+    "na",
+    "nos",
+    "nas",
+    "em",
+    "um",
+    "uma",
+    "uns",
+    "umas",
+    "os",
+    "as",
+    "e",
+    "ou",
+    "ao",
+    "aos",
+    "à",
+    "às",
+    "me",
+    "meu",
+    "minha",
+    "você",
+    "voce",
+    "vocês",
+    "voces",
+    "tamanho",
+    "tamanhos",
+    "número",
+    "numero",
+    "num",
+    "calço",
+    "calco",
+    "masculino",
+    "masculina",
+    "masculinas",
+    "feminino",
+    "feminina",
+    "femininas",
+    "infantil",
+    "unissex",
+    "unisex",
+    "homem",
+    "homens",
+    "mulher",
+    "mulheres",
+    "menino",
+    "menina",
+    "meninos",
+    "meninas",
+    "criança",
+    "crianca",
+    "crianças",
+    "criancas",
+    "ele",
+    "ela",
+    "how",
+    "the",
+    "for",
+    "and",
+    "any",
+    "show",
+    "find",
+    "oi",
+    "olá",
+    "ola",
+    "bom",
+    "boa",
+    "dia",
+    "tarde",
+    "noite",
+    "hey",
+    "hello",
 }
 
 
@@ -608,10 +700,7 @@ async def chat(
     declined: dict = session["declined"]
 
     has_product_criteria = bool(
-        intent.category_keywords
-        or intent.brand
-        or intent.price_min is not None
-        or intent.price_max is not None
+        intent.category_keywords or intent.brand or intent.price_min is not None or intent.price_max is not None
     )
 
     # Resposta numérica direta à pergunta do número (ex.: "38")
@@ -643,25 +732,14 @@ async def chat(
     # --- Fluxo guiado: pergunta o que falta antes de pesquisar ------------
     # Gênero vale para calçados e vestuário; o número do pé, só para calçados.
     # Buscas neutras (bolas, raquetes, acessórios) não recebem perguntas.
-    ask_gender = (
-        intent.is_gendered_search
-        and not prefs.get("gender")
-        and not declined.get("gender")
-    )
-    ask_size = (
-        intent.is_footwear_search
-        and not prefs.get("size")
-        and not declined.get("size")
-    )
+    ask_gender = intent.is_gendered_search and not prefs.get("gender") and not declined.get("gender")
+    ask_size = intent.is_footwear_search and not prefs.get("size") and not declined.get("size")
 
     if ask_gender:
         session["last_intent"] = intent
         session["awaiting"] = "gender"
         return ChatResponse(
-            reply=(
-                "Claro! Para quem é? Me diga **masculino**, "
-                "**feminino**, **infantil** ou **tanto faz**."
-            ),
+            reply=("Claro! Para quem é? Me diga **masculino**, **feminino**, **infantil** ou **tanto faz**."),
             filters_applied=_filters_applied(intent, prefs),
             products=[],
         )
@@ -669,10 +747,7 @@ async def chat(
         session["last_intent"] = intent
         session["awaiting"] = "size"
         return ChatResponse(
-            reply=(
-                "Anotado! E qual número você calça? (ex.: **38**) "
-                "— se não importar, digite **tanto faz**."
-            ),
+            reply=("Anotado! E qual número você calça? (ex.: **38**) — se não importar, digite **tanto faz**."),
             filters_applied=_filters_applied(intent, prefs),
             products=[],
         )
@@ -688,9 +763,7 @@ async def chat(
     # palavras-chave digitadas (ex.: "chuteira") e, quando o parser não
     # reconheceu nada, pelas próprias palavras da mensagem (ex.: "flamengo")
     # — assim produtos de qualquer tipo da loja são encontráveis.
-    search_terms: list[str] = list(
-        dict.fromkeys(intent.category_keywords + intent.keywords)
-    )
+    search_terms: list[str] = list(dict.fromkeys(intent.category_keywords + intent.keywords))
     extra_terms: list[str] = free_terms
     if (
         not search_terms
@@ -710,9 +783,7 @@ async def chat(
     if search_terms:
         # Also match products by their category slug (ex.: "chuteiras-society").
         cat_ids = db.exec(
-            select(Category.id).where(
-                or_(*[Category.slug.ilike(_like(s), escape="\\") for s in search_terms])
-            )
+            select(Category.id).where(or_(*[Category.slug.ilike(_like(s), escape="\\") for s in search_terms]))
         ).all()
         category_match = match_any(search_terms) if use_fts else None
         if category_match:
@@ -804,10 +875,7 @@ async def chat(
         filters_applied["terms"] = extra_terms
 
     if count == 0:
-        reply = (
-            "Não encontrei nenhum produto correspondente. "
-            "Tente buscar com termos mais amplos ou outra marca!"
-        )
+        reply = "Não encontrei nenhum produto correspondente. Tente buscar com termos mais amplos ou outra marca!"
     else:
         parts: list[str] = [f"Encontrei {count} produto{'s' if count != 1 else ''}"]
 
@@ -833,15 +901,9 @@ async def chat(
             reply = " ".join(parts) + ". Veja as melhores opções:"
 
         if size_relaxed:
-            reply += (
-                f" Não encontrei opções no número {prefs['size']}, "
-                "então incluí todos os tamanhos."
-            )
+            reply += f" Não encontrei opções no número {prefs['size']}, então incluí todos os tamanhos."
         if terms_relaxed:
-            reply += (
-                f" Não encontrei nada com \"{' '.join(extra_terms)}\", "
-                "então ampliei a busca."
-            )
+            reply += f' Não encontrei nada com "{" ".join(extra_terms)}", então ampliei a busca.'
 
     session["last_ids"] = [p.id for p in products]
     return ChatResponse(

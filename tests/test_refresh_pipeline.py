@@ -1,4 +1,5 @@
 """End-to-end refresh jobs with mocked HTTP: sitemap -> listings -> product pages -> database."""
+
 from __future__ import annotations
 
 from decimal import Decimal

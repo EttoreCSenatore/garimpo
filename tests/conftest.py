@@ -2,6 +2,7 @@
 
 These variables must be set before ``app.config`` is first imported.
 """
+
 import os
 import tempfile
 

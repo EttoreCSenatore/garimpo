@@ -168,9 +168,7 @@ async def refresh_single_product_async(product_id: int) -> None:
             await _emit_product_events(saved, changed)
     except Exception as exc:
         logger.error("task.refresh_single.error", product_id=product_id, error=str(exc))
-        emit(
-            {"event_type": "garimpo.error.http", "product_id": product_id, "error": str(exc)}
-        )
+        emit({"event_type": "garimpo.error.http", "product_id": product_id, "error": str(exc)})
     finally:
         inflight_single.discard(product_id)
         active_workers["single"] -= 1
@@ -213,6 +211,7 @@ async def _run_full_refresh() -> None:
         seen: set[int] = set()
         for url, cat_id in all_product_urls:
             from app.scraper.products import _extract_id
+
             pid = _extract_id(url)
             if pid in seen:
                 continue
@@ -267,9 +266,7 @@ async def _run_full_refresh() -> None:
                 r.error_message = str(exc)
                 session.add(r)
                 session.commit()
-        emit(
-            {"event_type": "garimpo.error.http", "run_id": run_id, "error": str(exc)}
-        )
+        emit({"event_type": "garimpo.error.http", "run_id": run_id, "error": str(exc)})
     finally:
         active_workers["full"] -= 1
         await client.close()

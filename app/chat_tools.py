@@ -3,6 +3,7 @@
 Follow-up commands act on the products the previous search showed ("compare", "cheapest",
 "price history"), so the chat feels like a conversation instead of one-shot search.
 """
+
 from __future__ import annotations
 
 import re
@@ -74,9 +75,7 @@ def price_summary(db: Session, product: Product) -> dict:
     prices = [
         h.price
         for h in db.exec(
-            select(ProductHistory)
-            .where(ProductHistory.product_id == product.id)
-            .order_by(ProductHistory.scraped_at)
+            select(ProductHistory).where(ProductHistory.product_id == product.id).order_by(ProductHistory.scraped_at)
         ).all()
         if h.price is not None
     ]
