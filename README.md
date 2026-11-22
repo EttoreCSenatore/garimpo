@@ -162,12 +162,13 @@ website/             Docusaurus documentation (English + Brazilian Portuguese)
 ## Development
 
 ```bash
-ruff check .
-.venv/bin/python -m pytest tests -q
+.venv/bin/pip install --require-hashes -r requirements-dev.txt
+ruff check . && ruff format --check .
+.venv/bin/python -m pytest tests -q --cov=app
 cd frontend && npx tsc --noEmit && npm run build
 ```
 
-CI runs these plus `pip-audit`, `npm audit` and a Docker build; CodeQL scans every pull request. Tests never hit the real site and never touch your local `garimpo.db`.
+Dependencies are hash-locked (`deploy/lock.sh`) and GitHub Actions are pinned to commit SHAs. CI runs these plus `pip-audit`, `npm audit`, a lock freshness check and a Docker build; CodeQL scans every pull request. See [CONTRIBUTING.md](CONTRIBUTING.md). Tests never hit the real site and never touch your local `garimpo.db`.
 
 ## Security and license
 

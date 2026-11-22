@@ -18,12 +18,19 @@ website/        Esta documentação (Docusaurus, inglês + português do Brasil)
 ## Portões de qualidade
 
 ```bash
-ruff check .                         # lint, incluindo regras de segurança (flake8-bandit)
-python -m pytest tests -q            # sem rede, banco temporário
+ruff check . && ruff format --check .        # lint (com regras de segurança) e formatação
+python -m pytest tests -q --cov=app          # sem rede, banco temporário; piso de cobertura no pyproject.toml
 cd frontend && npx tsc --noEmit && npm run build
 ```
 
-O CI roda as mesmas verificações, além de `pip-audit`, `npm audit` e um build Docker; o CodeQL analisa Python e TypeScript.
+O CI roda as mesmas verificações, além de `pip-audit`, `npm audit`, a checagem das travas e um build Docker; o CodeQL analisa Python e TypeScript.
+
+## Dependências e cadeia de suprimentos
+
+- As dependências diretas ficam em `requirements.in` (execução) e `requirements-dev.in` (ferramentas). `requirements.txt` e `requirements-dev.txt` são arquivos **travados com hashes**, gerados por `deploy/lock.sh` dentro do mesmo Python da imagem (precisa de Docker). O CI roda `deploy/lock.sh --check` e falha quando uma trava está desatualizada; as instalações usam `--require-hashes`.
+- As GitHub Actions são fixadas em um SHA de commit com a tag em comentário, e a imagem base do Docker em um digest; o Dependabot atualiza os dois.
+- O Dependabot espera 7 dias após um release antes de propor uma atualização de versão (um pacote comprometido costuma ser retirado em poucos dias); as atualizações de segurança não esperam.
+- A cobertura de testes tem um piso (`fail_under` no `pyproject.toml`, hoje 85 % contra cerca de 88 % medidos) que deve subir para 90 %.
 
 ## Notas sobre testes
 
