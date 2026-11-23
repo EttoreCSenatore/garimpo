@@ -26,3 +26,8 @@ Each row is a decision with its date and reason. When a decision changes, the ol
 | 015 | 2026-11-22 | Weekly live canary against the store | The Magento migration broke the scraper silently; a cheap check notices markup changes early | Accepted |
 | 016 | 2026-11-22 | Hash-locked dependencies, actions pinned by SHA, image pinned by digest, 7-day Dependabot cooldown | A compromised package or moved tag must not change what runs | Accepted |
 | 017 | 2026-11-22 | SemVer starting at 0.1.0; `app/releases.yaml` as the single source of history; images published to ghcr.io with provenance and SBOM | One truth for What's new, the API and GitHub Releases | Accepted |
+| 018 | 2026-11-22 | Alembic migrations replace `create_all`; existing databases are adopted by stamping a baseline | Schema changes need history and a rollback path; people already have a `garimpo.db` | Accepted |
+| 019 | 2026-11-22 | Mark a product disappeared after N consecutive full crawls without it, ignoring crawls that find under half the known products | A product can stop being listed without a 404; an outage must never empty the catalog | Accepted |
+| 020 | 2026-11-22 | Keep samples of pages that fail to parse and alert on a failure-rate spike | A store redesign should be debuggable in minutes, not discovered by empty data | Accepted |
+| 021 | 2026-11-22 | Prune scrape runs after 90 days; keep price history forever by default | Runs are operational noise; history is the product's value | Accepted |
+| 022 | 2026-11-22 | Postgres support, Redis-backed limits and catalog-learned synonyms are deferred | Not needed for a single instance; migrations are written portably so Postgres stays possible | Deferred |

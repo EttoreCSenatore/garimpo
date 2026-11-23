@@ -1,0 +1,55 @@
+name: Migrations
+
+# For pull requests that touch app/migrations: the SQL of each new migration, the operations that
+# delete data, edits to migrations already on the base branch (never allowed), and an
+# upgrade/downgrade/upgrade test on a throwaway database. Posted as one comment, updated in place,
+# and in the run summary. A job of its own so only it can write to the pull request.
+on:
+  pull_request:
+    paths:
+      - "app/migrations/**"
+      - "app/models.py"
+
+permissions:
+  contents: read
+  pull-requests: write  # the report comment
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0  # the base branch, to find the migrations this pull request changes
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install --require-hashes -r requirements.txt
+      - name: Report and back-and-forth test
+        run: python scripts/migrations_report.py --base "origin/$GITHUB_BASE_REF" --output report.md
+      - name: Summary of the run
+        if: always() && hashFiles('report.md') != ''
+        run: cat report.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Comment on the pull request
+        # Forks and Dependabot get a read-only token: the report stays in the run summary there.
+        if: >-
+          always() && hashFiles('report.md') != ''
+          && github.event.pull_request.head.repo.full_name == github.repository
+          && github.actor != 'dependabot[bot]'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          marker='<!-- migrations-report -->'
+          { echo "$marker"; head -c 60000 report.md; } > body.md
+          ids=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate \
+            --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"$marker\"))) | .id")
+          existing=${ids%%$'\n'*}
+          if [ -n "$existing" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$existing" -F body=@body.md >/dev/null
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -F body=@body.md >/dev/null
+          fi

@@ -10,6 +10,7 @@ from app.db import session_scope
 from app.events import emit
 from app.heartbeat import ping
 from app.models import Category, Product, ProductHistory, ProductStatus, ScrapeRun
+from app.reconcile import reconcile_missing
 from app.scraper.categories import discover_categories
 from app.scraper.client import RateLimitedClient
 from app.scraper.listings import crawl_category
@@ -28,6 +29,24 @@ def _history_entry(product_id: int, data: dict, now: datetime) -> ProductHistory
         status=data.get("status", ProductStatus.ACTIVE),
         scraped_at=data.get("scraped_at", now),
     )
+
+
+def _failure_spike(scraped: int, failed: int) -> bool:
+    """True when a run's parse/fetch failure rate is high enough to suspect a markup change."""
+    attempts = scraped + failed
+    if attempts < settings.parse_failure_alert_min or attempts == 0:
+        return False
+    spike = failed / attempts > settings.parse_failure_alert_ratio
+    if spike:
+        emit(
+            {
+                "event_type": "garimpo.error.parse_spike",
+                "failed": failed,
+                "attempts": attempts,
+                "ratio": round(failed / attempts, 3),
+            }
+        )
+    return spike
 
 
 def _save_product(data: dict) -> tuple[Product, bool]:
@@ -235,6 +254,15 @@ async def _run_full_refresh() -> None:
                 scraped += 1
                 await _emit_product_events(saved, changed)
 
+        # Products no longer listed in any category: marked disappeared after N consecutive crawls.
+        if categories:
+            from app.scraper.products import _extract_id as _id_of
+
+            listed = {pid for pid in (_id_of(u) for u, _ in all_product_urls) if pid is not None}
+            for gone in reconcile_missing(listed):
+                disappeared += 1
+                await _emit_product_events(gone, False, disappeared=True)
+
         with session_scope() as session:
             r = session.get(ScrapeRun, run_id)
             if r:
@@ -246,7 +274,8 @@ async def _run_full_refresh() -> None:
                 session.add(r)
                 session.commit()
 
-        await ping(settings.heartbeat_full_url)
+        spike = _failure_spike(scraped, failed)
+        await ping(settings.heartbeat_full_url, ok=not spike)
         emit(
             {
                 "event_type": "garimpo.run.completed",

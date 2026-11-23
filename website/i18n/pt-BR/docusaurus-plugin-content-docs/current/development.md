@@ -60,3 +60,15 @@ para que nenhuma imagem de produto de terceiros seja publicada.
 ## Canário do scraper
 
 Um workflow semanal (`.github/workflows/canary.yml`, também executável com `python -m app.canary`) faz cerca de quatro requisições educadas à loja real e confere se categorias, links de produto, nome, preço, imagens e tamanhos ainda são lidos. Se a loja mudar o HTML, ele falha em poucos dias, em vez de uma coleta devolver vazio em silêncio.
+
+## Migrações do banco de dados
+
+O esquema é versionado com o [Alembic](https://alembic.sqlalchemy.org/) (`app/migrations/`). O app roda `upgrade head` na inicialização. Um banco criado antes das migrações (tabelas sem `alembic_version`) é **adotado**: marcado na base `0001`, que é exatamente o esquema dele, e depois atualizado.
+
+```bash
+# depois de mudar um modelo em app/models.py
+alembic revision --autogenerate -m "o que mudou"   # revise o arquivo e dê server_default a colunas NOT NULL novas
+python -m pytest tests/test_migrations.py            # modelos e migrações precisam concordar; subir e descer precisa funcionar
+```
+
+Regras: nunca edite nem apague uma migração que já entrou (os bancos já a executaram); escreva uma nova. O SQLite altera a maioria das colunas reconstruindo a tabela (modo batch), o que o `scripts/migrations_report.py` sinaliza. O workflow **Migrations** comenta em todo pull request que mexe em modelos ou migrações com o SQL que seria executado, as operações destrutivas e um teste de subir, descer e subir. O índice FTS5 é gerenciado por `app/search/fts.py`, não por migrações.

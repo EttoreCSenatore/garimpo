@@ -60,3 +60,15 @@ product images are published.
 ## Scraper canary
 
 A weekly workflow (`.github/workflows/canary.yml`, also runnable with `python -m app.canary`) makes about four polite requests to the real store and checks that categories, product links, name, price, images and sizes still parse. If the store changes its markup it fails within days, instead of a scrape silently returning nothing.
+
+## Database migrations
+
+The schema is versioned with [Alembic](https://alembic.sqlalchemy.org/) (`app/migrations/`). The app runs `upgrade head` at startup. A database created before migrations existed (tables but no `alembic_version`) is **adopted**: stamped at the baseline `0001`, which is exactly its schema, then upgraded.
+
+```bash
+# after changing a model in app/models.py
+alembic revision --autogenerate -m "what changed"   # review the file, then give new NOT NULL columns a server_default
+python -m pytest tests/test_migrations.py            # models and migrations must agree; upgrade/downgrade must round-trip
+```
+
+Rules: never edit or delete a migration that was already merged (databases have run it); write a new one. SQLite changes most columns through a table rebuild (batch mode), which `scripts/migrations_report.py` flags. The **Migrations** workflow comments on every pull request that touches models or migrations with the SQL it would run, destructive operations and an upgrade, downgrade, upgrade test. The FTS5 index is managed by `app/search/fts.py`, not by migrations.

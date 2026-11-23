@@ -59,7 +59,9 @@ Each milestone is a handful of small PRs. Order is by value for effort.
 - **Docs:** an Operations section: install, upgrade, backup and restore, monitoring, logs.
 - Reference deployment: compose with a TLS reverse proxy (Caddy) and a systemd timer for backups.
 
-### M4: Data and correctness
+### M4: Data and correctness (mostly done)
+
+Done: Alembic migrations with a PR report, disappearance detection from crawls, parser resilience (failure samples and spike alert), retention. Deferred (decision 022): PostgreSQL option with Redis-backed limits, and synonyms learned from the catalog.
 
 - **Alembic migrations** replace `create_all`; add a PR workflow that prints each migration's SQL and tests upgrade then downgrade on a copy.
 - **Detect disappeared products from crawls:** mark a product missing after N consecutive full crawls without it, not only on a 404.

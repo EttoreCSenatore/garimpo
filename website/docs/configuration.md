@@ -40,6 +40,17 @@ Settings come from environment variables or a `.env` file (see `.env.example`). 
 | `INCREMENTAL_REFRESH_INTERVAL_MINUTES` | `15` | Incremental interval. |
 | `INCREMENTAL_TOP_N` | `200` | Products refreshed per incremental run. |
 
+## Data quality and retention
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `DISAPPEAR_AFTER_CRAWLS` | `3` | Consecutive full crawls without a product before it is marked disappeared. |
+| `DISAPPEAR_MIN_RATIO` | `0.5` | A crawl that finds a smaller share of the known products is treated as broken and ignored. |
+| `PARSE_FAILURE_ALERT_RATIO` / `PARSE_FAILURE_ALERT_MIN` | `0.2` / `10` | A full run with at least this many attempts and a higher failure rate emits `garimpo.error.parse_spike` and sends the failure heartbeat. |
+| `PARSE_FAILURE_SAMPLES_KEEP` / `PARSE_SAMPLE_BYTES` | `50` / `20000` | How many failing pages are kept for `GET /admin/parse-failures`, and how much HTML of each. |
+| `RETENTION_RUNS_DAYS` | `90` | Finished scrape runs older than this are deleted daily (0 keeps all). |
+| `RETENTION_HISTORY_DAYS` | `0` | Price history older than this is deleted (0, the default, keeps it forever). |
+
 ## Backups, heartbeats, freshness and metrics
 
 | Variable | Default | Description |

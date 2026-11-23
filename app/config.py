@@ -57,6 +57,21 @@ class Settings(BaseSettings):
 
     scheduler_enabled: bool = True
 
+    # Disappearance: a product missing from this many consecutive full crawls is marked disappeared.
+    # A crawl that finds fewer than this share of the known products is treated as broken and ignored.
+    disappear_after_crawls: int = 3
+    disappear_min_ratio: float = 0.5
+
+    # Parser resilience: alert when a run's failure rate spikes; keep samples of failing pages.
+    parse_failure_alert_ratio: float = 0.2
+    parse_failure_alert_min: int = 10
+    parse_failure_samples_keep: int = 50
+    parse_sample_bytes: int = 20000
+
+    # Retention (days; 0 keeps everything). Price history is the product's value: kept by default.
+    retention_runs_days: int = 90
+    retention_history_days: int = 0
+
     # SQLite backups: a daily online copy, a weekly restore test, retention by count.
     backup_enabled: bool = True
     backup_dir: str = ""  # empty: a "backups" folder next to the database file

@@ -56,10 +56,20 @@ scrape_configs:
     static_configs: [{targets: ["garimpo:8000"]}]
 ```
 
+Também: `garimpo_products_missing_crawls` (candidatos a desaparecimento) e `garimpo_parse_failure_samples`.
+
 Alertas úteis: `time() - garimpo_last_success_timestamp_seconds{run_type="full"} > 8*3600`, `garimpo_last_run_failed == 1`, `garimpo_restore_test_ok == 0` e um pico de `garimpo_last_run_products_failed` (a loja mudou o HTML; o [canário](./development#canário-do-scraper) costuma avisar primeiro).
 
 Mantenha o `/metrics` atrás do proxy reverso ou em uma rede interna.
 
+## Quando a loja muda as páginas
+
+1. O [canário](./development#canário-do-scraper) semanal falha, ou uma coleta completa registra `garimpo.error.parse_spike` (e chama o sinal de falha).
+2. Leia as páginas com falha mais recentes: `curl -H "X-Admin-Token: $ADMIN_TOKEN" "http://127.0.0.1:8000/admin/parse-failures?limit=5&full=true"` devolve a URL, o erro, o status HTTP e o início do HTML.
+3. Adicione esse HTML como fixture em `tests/fixtures/`, ajuste o parser até o teste passar e lance uma versão.
+
+Uma página que é lida mas não tem nome de produto também conta como falha, então um redesenho não enche o catálogo de produtos vazios em silêncio.
+
 ## Logs e eventos
 
-Tudo é JSON no stdout (`docker compose logs -f app`). Eventos de domínio: `garimpo.run.started|completed`, `garimpo.product.scraped|updated|disappeared`, `garimpo.backup.completed|restore_tested` e `garimpo.error.parse|http|backup|restore_test`.
+Tudo é JSON no stdout (`docker compose logs -f app`). Eventos de domínio: `garimpo.run.started|completed`, `garimpo.product.scraped|updated|disappeared`, `garimpo.backup.completed|restore_tested` e `garimpo.error.parse|parse_spike|crawl_incomplete|http|backup|restore_test` e `garimpo.retention.applied`.

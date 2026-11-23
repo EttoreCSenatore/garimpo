@@ -22,7 +22,7 @@ from app.backup import status as backup_status
 from app.config import settings
 from app.events import emit
 from app.metrics import render as render_metrics
-from app.models import Category, Product, ProductHistory, ProductStatus, ScrapeRun
+from app.models import Category, ParseFailure, Product, ProductHistory, ProductStatus, ScrapeRun
 from app.releases import current_release, localized
 from app.search.fts import fts_available, match_all, match_any, ranked_matches
 from app.search.intent_parser import ParsedIntent, parse_intent
@@ -323,6 +323,30 @@ async def get_stats(response: Response, db: Session = Depends(get_db)):
         "success_rate_24h": round(success_rate, 2),
         "errors_24h": total_failed,
         "runs_24h": len(runs_24h),
+    }
+
+
+@router.get("/admin/parse-failures", tags=["admin"])
+async def list_parse_failures(
+    limit: int = Query(default=20, ge=1, le=100),
+    full: bool = Query(default=False, description="Return the whole stored HTML sample, not a 2 kB excerpt"),
+    db: Session = Depends(get_db),
+    _: str = Depends(require_admin),
+):
+    """The newest pages that failed to parse, with an HTML sample to debug a store redesign."""
+    rows = db.exec(select(ParseFailure).order_by(ParseFailure.id.desc()).limit(limit)).all()
+    return {
+        "failures": [
+            {
+                "id": r.id,
+                "url": r.url,
+                "error": r.error,
+                "http_status": r.http_status,
+                "created_at": _as_utc(r.created_at).isoformat(),
+                "html_sample": (r.html_sample if full else (r.html_sample or "")[:2000]) or None,
+            }
+            for r in rows
+        ]
     }
 
 
