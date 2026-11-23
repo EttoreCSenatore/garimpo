@@ -21,6 +21,7 @@ To report a vulnerability, use the repository's private advisory form (see `SECU
 | **Abuse and DoS** | Per-client rate limits, bounded chat sessions, request size limits, one crawler at a time, capped in-flight refreshes. |
 | **Injection** | ORM with bound parameters; user text used in `LIKE` is escaped, and full-text queries are rebuilt from plain words (quoted, bound as a parameter), so FTS5 operators typed by users have no effect. |
 | **Secrets** | `.env`, databases and buffers are git-ignored; secret scanning and push protection are enabled on the repository. |
+| **Alerts (SSRF)** | Off by default. ntfy goes only to the configured server; webhooks only to exact HTTPS hosts on an operator allow-list (no IPs, rechecked at send time, redirects not followed). Watches are keyed by a random browser secret, rate limited and capped. |
 | **Supply chain** | Dependabot, `pip-audit` and `npm audit` in CI, CodeQL on every pull request. |
 | **Container** | Non-root, read-only filesystem, no capabilities, loopback port binding. |
 

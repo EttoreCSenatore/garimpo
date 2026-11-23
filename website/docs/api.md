@@ -52,6 +52,16 @@ Require the header `X-Admin-Token`. They are **disabled when `ADMIN_TOKEN` is em
 curl -X POST -H "X-Admin-Token: $ADMIN_TOKEN" http://127.0.0.1:8000/admin/refresh
 ```
 
+## Shopping and alerts
+
+| Method | Path | Description |
+| --- | --- | --- |
+| GET | `/api/catalog` | Filter (`q`, `brand`, `category_id`, `min_price`, `max_price`, `size`, `in_stock`), sort (`sort`) and page (`offset`, `limit`) the catalog. |
+| GET | `/api/facets` | Brands, sizes in stock, categories and the price range, for building filters. |
+| GET | `/api/deals` | Products at their lowest recorded price of the last `days` days, biggest drop first. |
+| GET | `/api/alerts/config` | Whether alerts are enabled and which channels exist. |
+| POST / GET / DELETE | `/api/watches` | Manage watches (header `X-Watcher-Id`). See [Explore, deals and alerts](./shopping). |
+
 ## Errors and limits
 
 - `401` invalid or missing admin token, `422` invalid parameters, `429` rate limit exceeded (with `Retry-After`).

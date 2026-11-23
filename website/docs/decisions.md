@@ -31,3 +31,6 @@ Each row is a decision with its date and reason. When a decision changes, the ol
 | 020 | 2026-11-22 | Keep samples of pages that fail to parse and alert on a failure-rate spike | A store redesign should be debuggable in minutes, not discovered by empty data | Accepted |
 | 021 | 2026-11-22 | Prune scrape runs after 90 days; keep price history forever by default | Runs are operational noise; history is the product's value | Accepted |
 | 022 | 2026-11-22 | Postgres support, Redis-backed limits and catalog-learned synonyms are deferred | Not needed for a single instance; migrations are written portably so Postgres stays possible | Deferred |
+| 023 | 2026-11-22 | Alerts without user accounts: a random browser id keys the watches | No passwords or e-mail to store or leak; the cost is that clearing browser data forgets them | Accepted |
+| 024 | 2026-11-22 | Alert delivery through ntfy and allow-listed webhooks only; Telegram and e-mail not built in | Both need operator credentials; webhooks reach them through a bridge, and exact-host allow-listing prevents SSRF | Accepted |
+| 025 | 2026-11-22 | A "deal" is a real recorded drop to the lowest price of the window, never the store's from/to price | The store's claims are not verifiable; our own history is | Accepted |

@@ -70,7 +70,9 @@ Feito: migrações com Alembic e relatório no PR, detecção de desaparecimento
 - **Opção PostgreSQL** com as mesmas migrações, para quem quiser mais de uma instância; limites de taxa e sessões do chat vão para o Redis só se isso acontecer.
 - Relevância mais inteligente: sinônimos aprendidos do catálogo.
 
-### M5: Recursos para quem compra
+### M5: Recursos para quem compra (concluído)
+
+Feito: Explorar (filtros e ordenação), Ofertas, avisos de queda de preço e volta ao estoque (ntfy e webhooks de lista permitida, por tamanho). Não embutidos: Telegram e e-mail (decisão 024).
 
 - Filtros e ordenação ao lado do chat (tamanho em estoque, marca, faixa de preço, categoria).
 - **Página de ofertas:** maiores quedas em relação ao histórico do próprio produto, com "menor preço em 90 dias".

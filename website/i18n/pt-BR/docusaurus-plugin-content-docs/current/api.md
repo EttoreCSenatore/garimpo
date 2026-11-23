@@ -52,6 +52,16 @@ Exigem o cabeçalho `X-Admin-Token`. Ficam **desativados quando `ADMIN_TOKEN` es
 curl -X POST -H "X-Admin-Token: $ADMIN_TOKEN" http://127.0.0.1:8000/admin/refresh
 ```
 
+## Compras e avisos
+
+| Método | Caminho | Descrição |
+| --- | --- | --- |
+| GET | `/api/catalog` | Filtra (`q`, `brand`, `category_id`, `min_price`, `max_price`, `size`, `in_stock`), ordena (`sort`) e pagina (`offset`, `limit`) o catálogo. |
+| GET | `/api/facets` | Marcas, tamanhos em estoque, categorias e a faixa de preço, para montar filtros. |
+| GET | `/api/deals` | Produtos no menor preço registrado dos últimos `days` dias, maior queda primeiro. |
+| GET | `/api/alerts/config` | Se os avisos estão ligados e quais canais existem. |
+| POST / GET / DELETE | `/api/watches` | Gerencia avisos (cabeçalho `X-Watcher-Id`). Veja [Explorar, ofertas e avisos](./shopping). |
+
 ## Erros e limites
 
 - `401` token de admin inválido ou ausente, `422` parâmetros inválidos, `429` limite de taxa excedido (com `Retry-After`).

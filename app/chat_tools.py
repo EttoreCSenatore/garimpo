@@ -18,6 +18,10 @@ MAX_COMPARE = 4
 
 _COMPARE_RE = re.compile(r"\b(compar\w*|versus|vs\.?|diferen[çc]a\w*|compare)\b", re.IGNORECASE)
 _CHEAPEST_RE = re.compile(r"\b(mais barat\w*|cheapest|menor pre[çc]o|barat\w*)\b", re.IGNORECASE)
+_DEALS_RE = re.compile(
+    r"\b(ofertas?|promo[çc][õo]es|promo[çc][ãa]o|deals?|descontos?|liquida[çc][ãa]o|baixou de pre[çc]o)\b",
+    re.IGNORECASE,
+)
 _HISTORY_RE = re.compile(
     r"\b(hist[óo]rico|baixou|caiu|subiu|varia[çc][ãa]o|price history|price drop|vale a pena)\b",
     re.IGNORECASE,
@@ -28,7 +32,7 @@ _WORD_COUNTS = {"dois": 2, "duas": 2, "tres": 3, "três": 3, "quatro": 4, "two":
 
 @dataclass
 class Command:
-    kind: str  # "compare" | "cheapest" | "history"
+    kind: str  # "compare" | "cheapest" | "history" | "deals"
     count: int = 3
 
 
@@ -47,6 +51,8 @@ def detect_command(message: str) -> Command | None:
                 count = value
                 break
     count = max(2, min(MAX_COMPARE, count))
+    if _DEALS_RE.search(text):
+        return Command("deals")
     if _COMPARE_RE.search(text):
         return Command("compare", count)
     if _HISTORY_RE.search(text):
@@ -151,3 +157,14 @@ def history_reply(db: Session, product: Product) -> str:
     if s["current"] is not None and s["current"] == s["lowest"]:
         text += " Está no **menor preço** que já vi."
     return text
+
+
+def deals_reply(deals: list[dict]) -> str:
+    if not deals:
+        return "Ainda não encontrei quedas de preço reais no histórico. Volte depois de algumas coletas!"
+    top = deals[0]
+    return (
+        f"Encontrei **{len(deals)} oferta{'s' if len(deals) != 1 else ''}** de verdade, calculadas pelo histórico de preços "
+        f"(produtos no menor preço dos últimos {top['days']} dias). A maior queda: **{top['product'].name}**, "
+        f"**-{top['discount_pct']:.0f}%** (de {_brl(top['was'])} por {_brl(top['now'])})."
+    )

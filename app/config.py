@@ -72,6 +72,15 @@ class Settings(BaseSettings):
     retention_runs_days: int = 90
     retention_history_days: int = 0
 
+    # Alerts (price drops and restocks) for shoppers who set a watch. Off by default: it makes
+    # outbound requests. ntfy topics go to ALERTS_NTFY_SERVER; webhooks only to exact HTTPS hosts
+    # you list in ALERTS_WEBHOOK_HOSTS (comma-separated; empty disables the webhook channel).
+    alerts_enabled: bool = False
+    alerts_ntfy_server: str = "https://ntfy.sh"
+    alerts_webhook_hosts: str = ""
+    alerts_max_watches_per_watcher: int = 20
+    watch_rate_limit_per_minute: int = 20
+
     # SQLite backups: a daily online copy, a weekly restore test, retention by count.
     backup_enabled: bool = True
     backup_dir: str = ""  # empty: a "backups" folder next to the database file
@@ -147,6 +156,10 @@ class Settings(BaseSettings):
             "tamanho",
             "sid",
         }
+
+    @property
+    def alerts_webhook_host_list(self) -> list[str]:
+        return [h.strip().lower() for h in self.alerts_webhook_hosts.split(",") if h.strip()]
 
     @property
     def cors_origin_list(self) -> list[str]:

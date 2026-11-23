@@ -31,3 +31,6 @@ Cada linha é uma decisão com data e motivo. Quando uma decisão muda, a linha 
 | 020 | 2026-11-22 | Guardar amostras de páginas que falham na leitura e alertar em picos de falha | Um redesenho da loja deve ser depurável em minutos, não descoberto por dados vazios | Aceita |
 | 021 | 2026-11-22 | Apagar coletas após 90 dias; manter o histórico de preços para sempre por padrão | As coletas são ruído operacional; o histórico é o valor do produto | Aceita |
 | 022 | 2026-11-22 | Suporte a Postgres, limites com Redis e sinônimos aprendidos do catálogo ficam adiados | Desnecessários para uma instância; as migrações são escritas de forma portável, então o Postgres continua possível | Adiada |
+| 023 | 2026-11-22 | Avisos sem contas de usuário: um id aleatório do navegador é a chave | Sem senhas nem e-mails para guardar ou vazar; o custo é que limpar os dados do navegador os esquece | Aceita |
+| 024 | 2026-11-22 | Entrega de avisos só por ntfy e webhooks de uma lista permitida; Telegram e e-mail não vêm embutidos | Ambos exigem credenciais de quem opera; os webhooks chegam a eles por uma ponte, e a lista de hosts exatos evita SSRF | Aceita |
+| 025 | 2026-11-22 | Uma "oferta" é uma queda real registrada até o menor preço da janela, nunca o "de/por" da loja | As alegações da loja não são verificáveis; o nosso histórico é | Aceita |

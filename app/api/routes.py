@@ -733,6 +733,15 @@ async def chat(
 
     # --- Follow-up commands act on the previous results (compare, cheapest, history) ---
     command = None if (intent.category_keywords or intent.brand) else chat_tools.detect_command(payload.message)
+    if command and command.kind == "deals":
+        from app.deals import find_deals
+
+        found = find_deals(db, limit=12)
+        return ChatResponse(
+            reply=chat_tools.deals_reply(found),
+            filters_applied={"deals": True},
+            products=[_apply_disclaimer(d["product"].model_dump()) for d in found],
+        )
     if command and session.get("last_ids"):
         shown = chat_tools.load_products(db, session["last_ids"])
         if command.kind == "compare" and len(shown) >= 2:

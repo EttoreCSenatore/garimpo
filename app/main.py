@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import router
+from app.api.shop import router as shop_router
 from app.config import settings
 from app.db import init_db
 from app.security import SecurityHeadersMiddleware
@@ -133,11 +134,12 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
     allow_credentials=False,
-    allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type", "X-Admin-Token"],
+    allow_methods=["GET", "POST", "DELETE"],
+    allow_headers=["Content-Type", "X-Admin-Token", "X-Watcher-Id"],
 )
 
 app.include_router(router)
+app.include_router(shop_router)
 
 
 def main() -> None:

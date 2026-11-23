@@ -158,7 +158,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50">
+    <div className="flex flex-col h-full bg-slate-50">
       {/* Header */}
       <header className="flex-shrink-0 border-b border-slate-200 bg-white/80 backdrop-blur-sm px-4 py-3">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
