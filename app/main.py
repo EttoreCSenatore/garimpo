@@ -14,6 +14,7 @@ from app.config import settings
 from app.db import init_db
 from app.security import SecurityHeadersMiddleware
 from app.state import spawn
+from app.version import __version__
 
 structlog.configure(
     processors=[
@@ -84,7 +85,7 @@ async def run_incremental_refresh_job() -> None:
 app = FastAPI(
     title="Garimpo API",
     description="Scraper de produtos e API REST para tivolli.com.br",
-    version="1.0.0",
+    version=__version__,
     lifespan=lifespan,
 )
 

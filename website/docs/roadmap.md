@@ -42,7 +42,7 @@ Each milestone is a handful of small PRs. Order is by value for effort.
 - Add `CODEOWNERS`, `CONTRIBUTING.md` and a Code of Conduct.
 - Pin the Docker base image by digest.
 
-### M2: Releases, versioning and decisions
+### M2: Releases, versioning and decisions (done)
 
 - Adopt SemVer, starting at `0.1.0`; version exposed at `GET /api/version` and in the UI footer.
 - One `releases.yaml` (or `CHANGELOG`) as the source for GitHub Releases and a "What's new" docs page (en + pt-BR).

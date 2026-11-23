@@ -20,10 +20,12 @@ from app.api.dependencies import get_db, require_admin
 from app.config import settings
 from app.events import emit
 from app.models import Category, Product, ProductHistory, ProductStatus, ScrapeRun
+from app.releases import current_release, localized
 from app.search.fts import fts_available, match_all, match_any, ranked_matches
 from app.search.intent_parser import ParsedIntent, parse_intent
 from app.security import chat_rate_limit, image_rate_limit, resolve_allowed_url
 from app.state import MAX_INFLIGHT_SINGLE, active_workers, inflight_single, spawn
+from app.version import __version__
 
 router = APIRouter()
 
@@ -119,10 +121,24 @@ async def health_check(db: Session = Depends(get_db)):
     return {
         "status": "ok",
         "service": "garimpo",
-        "version": "1.0.0",
+        "version": __version__,
         "last_refresh": last_run.completed_at.isoformat() if last_run and last_run.completed_at else None,
         "timestamp": datetime.now(UTC).isoformat(),
     }
+
+
+@router.get("/api/version", tags=["health"])
+@router.get("/version", tags=["health"], include_in_schema=False)
+async def get_version():
+    """Installed version, without login: usable by any uptime monitor."""
+    release = current_release()
+    return {"version": __version__, "date": str(release.get("date"))}
+
+
+@router.get("/api/releases", tags=["health"])
+async def get_releases(lang: str = Query(default="en", max_length=8)):
+    """Release history ("What's new"), in English or Portuguese (``lang=pt-br``)."""
+    return {"releases": localized(lang)}
 
 
 @router.get("/products", tags=["products"])

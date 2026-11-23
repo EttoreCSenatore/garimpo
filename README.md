@@ -170,6 +170,10 @@ cd frontend && npx tsc --noEmit && npm run build
 
 Dependencies are hash-locked (`deploy/lock.sh`) and GitHub Actions are pinned to commit SHAs. CI runs these plus `pip-audit`, `npm audit`, a lock freshness check and a Docker build; CodeQL scans every pull request. See [CONTRIBUTING.md](CONTRIBUTING.md). Tests never hit the real site and never touch your local `garimpo.db`.
 
+## Versions
+
+SemVer; the history is `app/releases.yaml` (also shown in the chat's footer as **Novidades**, at `GET /api/releases`, and in [GitHub Releases](https://github.com/EttoreCSenatore/garimpo/releases)). Tagged releases publish a container image to `ghcr.io/ettorecsenatore/garimpo`. See [Versioning and releases](https://ettorecsenatore.github.io/garimpo/versioning) and the [decision log](https://ettorecsenatore.github.io/garimpo/decisions).
+
 ## Security and license
 
 - Found a vulnerability? See [SECURITY.md](SECURITY.md) (private advisory form).

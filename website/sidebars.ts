@@ -18,7 +18,7 @@ const sidebars: SidebarsConfig = {
     {
       type: 'category',
       label: 'Project',
-      items: ['development', 'roadmap'],
+      items: ['vision', 'data-model', 'glossary', 'decisions', 'versioning', 'development', 'roadmap'],
     },
   ],
 };

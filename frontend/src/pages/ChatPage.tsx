@@ -5,6 +5,7 @@ import { sendChatMessage } from '../api'
 import type { ChatMessage } from '../types'
 import ChatBubble from '../components/ChatBubble'
 import TypingIndicator from '../components/TypingIndicator'
+import WhatsNew from '../components/WhatsNew'
 
 const SESSION_ID = crypto.randomUUID()
 
@@ -59,6 +60,8 @@ export default function ChatPage() {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<string | null>(null)
+  const [version, setVersion] = useState<string | null>(null)
+  const [showNews, setShowNews] = useState(false)
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -80,6 +83,13 @@ export default function ChatPage() {
           )
         }
       })
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/version')
+      .then((r) => r.json())
+      .then((d: { version?: string }) => setVersion(d.version ?? null))
       .catch(() => {})
   }, [])
 
@@ -235,9 +245,18 @@ export default function ChatPage() {
           </div>
           <p className="text-center text-[10px] text-slate-400 mt-1.5">
             Pressione Enter para enviar · Shift+Enter para quebra de linha
+            {version && (
+              <>
+                {' · '}
+                <button onClick={() => setShowNews(true)} className="underline hover:text-indigo-600">
+                  Garimpo v{version} · Novidades
+                </button>
+              </>
+            )}
           </p>
         </div>
       </div>
+      {showNews && <WhatsNew onClose={() => setShowNews(false)} />}
     </div>
   )
 }
