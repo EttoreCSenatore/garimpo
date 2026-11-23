@@ -21,6 +21,10 @@ O arquivo compose já vem endurecido:
 - o estado fica no volume `garimpo_data` (`/app/data`): o banco SQLite
 - o health check chama `/api/health` com Python, então a imagem não contém `curl`
 
+## Imagem publicada
+
+Os releases com tag publicam uma imagem com proveniência de build e SBOM em `ghcr.io/ettorecsenatore/garimpo` (veja [Versões e releases](./versioning)). Use-a em vez de construir localmente trocando `build: .` do compose por `image: ghcr.io/ettorecsenatore/garimpo:0.3.0`.
+
 ## Proxy reverso
 
 Termine o TLS na frente do app (Caddy, nginx, Traefik). Se você depende do IP do cliente para limitar a taxa,

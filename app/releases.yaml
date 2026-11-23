@@ -1,0 +1,65 @@
+# Release history: the single source for the "What's new" page, GET /api/releases and the
+# GitHub Release notes (scripts/release_notes.py). Newest first. Texts in English and Portuguese.
+# kind: new | improvement | fix | security
+- version: 0.3.0
+  date: 2026-11-22
+  title:
+    en: Follow-up chat, price history and a hardened supply chain
+    pt-br: Chat com acompanhamento, histórico de preços e cadeia de suprimentos reforçada
+  items:
+    - kind: new
+      text:
+        en: The chat can compare the first results, show the cheapest in stock and summarise a product's price history, all computed from the database.
+        pt-br: O chat compara os primeiros resultados, mostra o mais barato em estoque e resume o histórico de preços de um produto, tudo calculado a partir do banco.
+    - kind: new
+      text:
+        en: The product view draws a price-history chart.
+        pt-br: A tela do produto desenha um gráfico do histórico de preços.
+    - kind: new
+      text:
+        en: "`./scripts/demo.sh` runs the whole app on demo data with a throwaway database."
+        pt-br: "`./scripts/demo.sh` executa o app inteiro com dados de demonstração e um banco descartável."
+    - kind: new
+      text:
+        en: A weekly live canary checks that the store's pages still parse.
+        pt-br: Um canário semanal confere se as páginas da loja ainda são lidas corretamente.
+    - kind: improvement
+      text:
+        en: Events are structured JSON logs on stdout; Splunk support was removed.
+        pt-br: Os eventos são logs JSON estruturados no stdout; o suporte ao Splunk foi removido.
+    - kind: improvement
+      text:
+        en: Dependencies are hash-locked, GitHub Actions and the Docker base image are pinned, and the version is exposed at /api/version.
+        pt-br: As dependências têm hashes travados, as GitHub Actions e a imagem base do Docker são fixadas, e a versão aparece em /api/version.
+- version: 0.2.0
+  date: 2026-11-14
+  title:
+    en: Rewrite for the store's new platform
+    pt-br: Reescrita para a nova plataforma da loja
+  items:
+    - kind: improvement
+      text:
+        en: The scraper reads the store's new Magento pages (categories from the sitemap, listings, structured product data, sizes and prices per size).
+        pt-br: O scraper lê as novas páginas Magento da loja (categorias pelo sitemap, listagens, dados estruturados do produto, tamanhos e preços por tamanho).
+    - kind: new
+      text:
+        en: Product detail view with gallery, sizes, instalments, cash price and description.
+        pt-br: Tela de detalhes do produto com galeria, tamanhos, parcelas, preço à vista e descrição.
+    - kind: new
+      text:
+        en: Full-text product search (SQLite FTS5, BM25 ranking).
+        pt-br: Busca de produtos em texto completo (SQLite FTS5, ranking BM25).
+- version: 0.1.0
+  date: 2026-11-14
+  title:
+    en: First public version
+    pt-br: Primeira versão pública
+  items:
+    - kind: new
+      text:
+        en: Rate-limited catalog scraper, REST API and a chat that understands Portuguese and English searches.
+        pt-br: Scraper de catálogo com limite de taxa, API REST e um chat que entende buscas em português e inglês.
+    - kind: security
+      text:
+        en: Security hardening of the image proxy, admin access, CORS, rate limits and the container.
+        pt-br: Reforço de segurança do proxy de imagens, do acesso administrativo, do CORS, dos limites de taxa e do contêiner.

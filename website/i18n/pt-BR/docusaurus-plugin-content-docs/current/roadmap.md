@@ -42,7 +42,7 @@ Cada marco é um punhado de PRs pequenos, em ordem de valor pelo esforço.
 - Adicionar `CODEOWNERS`, `CONTRIBUTING.md` e um Código de Conduta.
 - Fixar a imagem base do Docker por digest.
 
-### M2: Versões, releases e decisões
+### M2: Versões, releases e decisões (concluído)
 
 - Adotar SemVer a partir de `0.1.0`; versão exposta em `GET /api/version` e no rodapé da interface.
 - Um `releases.yaml` (ou `CHANGELOG`) como fonte dos GitHub Releases e de uma página "Novidades" na documentação (en + pt-BR).

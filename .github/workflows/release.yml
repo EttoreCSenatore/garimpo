@@ -1,0 +1,72 @@
+name: Release
+
+# Push a tag `vX.Y.Z` that matches app/version.py and the newest entry of app/releases.yaml.
+# Builds the image, publishes it to ghcr.io with provenance and an SBOM, and creates the
+# GitHub Release with the notes from releases.yaml. Needs the `main` checks to have passed.
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write   # create the GitHub Release
+      packages: write   # push to ghcr.io/ettorecsenatore/garimpo
+    env:
+      IMAGE: ghcr.io/ettorecsenatore/garimpo
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install --require-hashes -r requirements.txt
+      - name: Tag matches the version
+        id: version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          declared="$(python -c 'from app.version import __version__; print(__version__)')"
+          newest="$(python -c 'from app.releases import load_releases; print(load_releases()[0]["version"])')"
+          [ "$version" = "$declared" ] || { echo "tag $version != app/version.py $declared"; exit 1; }
+          [ "$version" = "$newest" ] || { echo "tag $version != newest release $newest"; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "minor=${version%.*}" >> "$GITHUB_OUTPUT"
+      - name: Release notes
+        run: python scripts/release_notes.py "${{ steps.version.outputs.version }}" > notes.md
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069  # v4.4.1
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550  # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc  # v7.4.0
+        with:
+          context: .
+          push: true
+          provenance: mode=max
+          sbom: true
+          tags: |
+            ${{ env.IMAGE }}:${{ steps.version.outputs.version }}
+            ${{ env.IMAGE }}:${{ steps.version.outputs.minor }}
+            ${{ env.IMAGE }}:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.version=${{ steps.version.outputs.version }}
+            org.opencontainers.image.licenses=MIT
+      - name: GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          title="$(python scripts/release_notes.py "${{ steps.version.outputs.version }}" --title)"
+          gh release create "$GITHUB_REF_NAME" --title "$title" --notes-file notes.md --verify-tag

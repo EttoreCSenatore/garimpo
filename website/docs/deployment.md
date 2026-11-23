@@ -21,6 +21,10 @@ The compose file is hardened by default:
 - state lives in the `garimpo_data` volume (`/app/data`): the SQLite database
 - the health check calls `/api/health` with Python, so the image contains no `curl`
 
+## Published image
+
+Tagged releases publish a container image with build provenance and an SBOM to `ghcr.io/ettorecsenatore/garimpo` (see [Versioning and releases](./versioning)). Use it instead of building locally by replacing `build: .` in the compose file with `image: ghcr.io/ettorecsenatore/garimpo:0.3.0`.
+
 ## Reverse proxy
 
 Terminate TLS in front of the app (Caddy, nginx, Traefik). If you rely on client IPs for rate limiting,
