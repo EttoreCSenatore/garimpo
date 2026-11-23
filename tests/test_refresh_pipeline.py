@@ -146,3 +146,20 @@ async def test_incremental_refresh_records_price_change_in_history():
             ).all()
         ]
     assert prices == [Decimal("999.00"), Decimal("149.90")]
+
+
+async def test_full_refresh_pings_the_heartbeat_on_success_and_on_failure(monkeypatch):
+    monkeypatch.setattr(settings, "heartbeat_full_url", "https://hc.example/full")
+    with respx.mock(assert_all_called=False) as router:
+        _mock_catalog(router)
+        ok = router.get("https://hc.example/full").mock(return_value=httpx.Response(200))
+        fail = router.get("https://hc.example/full/fail").mock(return_value=httpx.Response(200))
+        await tasks.run_full_refresh_async()
+        assert ok.called and not fail.called
+
+    with respx.mock(assert_all_called=False) as router:
+        router.get(f"{BASE}/google_sitemap.xml").mock(return_value=httpx.Response(500))
+        ok = router.get("https://hc.example/full").mock(return_value=httpx.Response(200))
+        fail = router.get("https://hc.example/full/fail").mock(return_value=httpx.Response(200))
+        await tasks.run_full_refresh_async()
+        assert fail.called and not ok.called

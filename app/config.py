@@ -56,6 +56,28 @@ class Settings(BaseSettings):
     chat_max_sessions: int = 5000
 
     scheduler_enabled: bool = True
+
+    # SQLite backups: a daily online copy, a weekly restore test, retention by count.
+    backup_enabled: bool = True
+    backup_dir: str = ""  # empty: a "backups" folder next to the database file
+    backup_hour_utc: int = 6
+    backup_keep: int = 14
+    restore_test_weekday: str = "sun"
+
+    # Optional heartbeat URLs (Healthchecks.io style: GET to ping, "/fail" suffix on failure).
+    # Silence means the job stopped, which is the cheapest way to notice a dead scraper.
+    heartbeat_full_url: str = ""
+    heartbeat_incremental_url: str = ""
+    heartbeat_backup_url: str = ""
+    heartbeat_restore_url: str = ""
+
+    # Freshness: the API reports "stale" when the catalog or the last backup is older than this.
+    stale_after_hours: int = 24
+    backup_stale_hours: int = 26
+
+    # Prometheus text metrics at /metrics; off by default. With a token, send it as a Bearer token.
+    metrics_enabled: bool = False
+    metrics_token: str = ""
     full_refresh_interval_minutes: int = 360
     incremental_refresh_interval_minutes: int = 15
     incremental_top_n: int = 200

@@ -9,21 +9,24 @@ from urllib.parse import urljoin
 from uuid import uuid4
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.encoders import jsonable_encoder
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import update
 from sqlmodel import Session, String, and_, cast, func, or_, select
 
 from app import chat_tools
 from app.api.dependencies import get_db, require_admin
+from app.backup import status as backup_status
 from app.config import settings
 from app.events import emit
+from app.metrics import render as render_metrics
 from app.models import Category, Product, ProductHistory, ProductStatus, ScrapeRun
 from app.releases import current_release, localized
 from app.search.fts import fts_available, match_all, match_any, ranked_matches
 from app.search.intent_parser import ParsedIntent, parse_intent
-from app.security import chat_rate_limit, image_rate_limit, resolve_allowed_url
+from app.security import chat_rate_limit, image_rate_limit, resolve_allowed_url, tokens_match
 from app.state import MAX_INFLIGHT_SINGLE, active_workers, inflight_single, spawn
 from app.version import __version__
 
@@ -116,15 +119,38 @@ def _apply_disclaimer(product: dict) -> dict:
 @router.get("/api/health", tags=["health"])
 async def health_check(db: Session = Depends(get_db)):
     last_run = db.exec(
-        select(ScrapeRun).where(ScrapeRun.completed_at.is_not(None)).order_by(ScrapeRun.completed_at.desc()).limit(1)
+        select(ScrapeRun)
+        .where(ScrapeRun.completed_at.is_not(None), ScrapeRun.status == "completed")
+        .order_by(ScrapeRun.completed_at.desc())
+        .limit(1)
     ).first()
+    now = datetime.now(UTC)
+    last_refresh = _as_utc(last_run.completed_at) if last_run and last_run.completed_at else None
+    age = int((now - last_refresh).total_seconds()) if last_refresh else None
     return {
         "status": "ok",
         "service": "garimpo",
         "version": __version__,
-        "last_refresh": last_run.completed_at.isoformat() if last_run and last_run.completed_at else None,
-        "timestamp": datetime.now(UTC).isoformat(),
+        "last_refresh": last_refresh.isoformat() if last_refresh else None,
+        "catalog_age_seconds": age,
+        # True when no successful refresh happened within STALE_AFTER_HOURS (the UI warns visitors).
+        "stale": age is None or age > settings.stale_after_hours * 3600,
+        "backup": backup_status(),
+        "timestamp": now.isoformat(),
     }
+
+
+@router.get("/metrics", tags=["health"], include_in_schema=False)
+async def metrics(request: Request, db: Session = Depends(get_db)):
+    """Prometheus metrics; 404 unless METRICS_ENABLED, and Bearer-protected when METRICS_TOKEN is set."""
+    if not settings.metrics_enabled:
+        raise HTTPException(status_code=404, detail="Not found")
+    if settings.metrics_token:
+        header = request.headers.get("authorization", "")
+        token = header[7:] if header.lower().startswith("bearer ") else ""
+        if not tokens_match(token, settings.metrics_token):
+            raise HTTPException(status_code=401, detail="Invalid or missing metrics token")
+    return PlainTextResponse(render_metrics(db), media_type="text/plain; version=0.0.4")
 
 
 @router.get("/api/version", tags=["health"])

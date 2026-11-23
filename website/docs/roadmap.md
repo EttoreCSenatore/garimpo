@@ -50,7 +50,7 @@ Each milestone is a handful of small PRs. Order is by value for effort.
 - Start a numbered decision log in the docs (SQLite first, rule-based chat, why no LLM, polite scraping, no Splunk) with date, reason and status.
 - Add vision, data-model and glossary pages under a "Project" section.
 
-### M3: Run it for real (operations)
+### M3: Run it for real (operations) (done)
 
 - **Backups:** daily online SQLite backup (`.backup`), retention, and a weekly restore test into a throwaway file. Record the last backup and show a warning when it is older than 26 hours.
 - **Heartbeats:** optional Healthchecks.io-style pings (URL in `.env`) after each full refresh, incremental refresh, backup and canary; silence means something stopped. This is the cheapest way to know the scraper died.

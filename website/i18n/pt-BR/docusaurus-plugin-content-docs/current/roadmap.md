@@ -50,7 +50,7 @@ Cada marco é um punhado de PRs pequenos, em ordem de valor pelo esforço.
 - Abrir um registro numerado de decisões na documentação (SQLite primeiro, chat por regras, por que sem LLM, coleta educada, sem Splunk) com data, motivo e status.
 - Páginas de visão, modelo de dados e glossário em uma seção "Projeto".
 
-### M3: Operar de verdade
+### M3: Operar de verdade (concluído)
 
 - **Backups:** backup online diário do SQLite (`.backup`), retenção e um teste semanal de restauração em um arquivo descartável. Registrar o último backup e avisar quando passar de 26 horas.
 - **Sinais de vida:** pings opcionais no estilo Healthchecks.io (URL no `.env`) após cada coleta completa, coleta incremental, backup e canário; o silêncio indica que algo parou. É a forma mais barata de saber que o scraper morreu.

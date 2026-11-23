@@ -39,3 +39,18 @@ Settings come from environment variables or a `.env` file (see `.env.example`). 
 | `FULL_REFRESH_INTERVAL_MINUTES` | `360` | Full crawl interval. |
 | `INCREMENTAL_REFRESH_INTERVAL_MINUTES` | `15` | Incremental interval. |
 | `INCREMENTAL_TOP_N` | `200` | Products refreshed per incremental run. |
+
+## Backups, heartbeats, freshness and metrics
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `BACKUP_ENABLED` | `true` | Daily SQLite backup and weekly restore test (ignored for other databases). |
+| `BACKUP_DIR` | *(next to the database)* | Where backups and `status.json` are kept. |
+| `BACKUP_HOUR_UTC` | `6` | Hour of the daily backup; the restore test runs one hour later. |
+| `BACKUP_KEEP` | `14` | Backups kept; older ones are deleted. |
+| `RESTORE_TEST_WEEKDAY` | `sun` | Day of the weekly restore test. |
+| `HEARTBEAT_FULL_URL`, `HEARTBEAT_INCREMENTAL_URL`, `HEARTBEAT_BACKUP_URL`, `HEARTBEAT_RESTORE_URL` | *(empty)* | Heartbeat URLs; empty disables. See [Monitoring](./monitoring). |
+| `STALE_AFTER_HOURS` | `24` | `stale: true` in `/api/health` (and a banner in the chat) when no successful refresh happened within this time. |
+| `BACKUP_STALE_HOURS` | `26` | The backup counts as stale after this time. |
+| `METRICS_ENABLED` | `false` | Serve Prometheus metrics at `/metrics`. |
+| `METRICS_TOKEN` | *(empty)* | Optional Bearer token required by `/metrics`. |

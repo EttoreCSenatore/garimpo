@@ -13,7 +13,7 @@ const sidebars: SidebarsConfig = {
     {
       type: 'category',
       label: 'Operations',
-      items: ['deployment', 'security', 'responsible-use'],
+      items: ['deployment', 'backup-restore', 'monitoring', 'upgrade', 'security', 'responsible-use'],
     },
     {
       type: 'category',

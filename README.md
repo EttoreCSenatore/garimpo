@@ -31,6 +31,7 @@ It is a rate-limited catalog scraper, FastAPI REST API and conversational search
 - **Full-text search**: SQLite FTS5 over name, brand, category and slug; accent- and order-insensitive, prefix matching, BM25 ranking
 - **Chat search**: a rule-based intent parser (Portuguese and English, no LLM or API keys) that asks for gender and shoe size when needed, then answers follow-ups from the database: compare products, cheapest in stock, price history
 - **Price history**: every real price change is recorded and drawn as a chart in the product view
+- **Operations**: daily online SQLite backup with a weekly restore test, optional heartbeat pings per job, `/metrics` for Prometheus and a stale-catalog banner (see [Operations](https://ettorecsenatore.github.io/garimpo/monitoring))
 - **Scraper canary**: a weekly live check that fails when the store's markup changes
 - **Structured events**: scrape runs, price changes and errors as JSON logs, ready for any log collector
 - **Secure defaults**: SSRF-safe image proxy, admin token required in production, strict CORS, rate limits, non-root read-only container
