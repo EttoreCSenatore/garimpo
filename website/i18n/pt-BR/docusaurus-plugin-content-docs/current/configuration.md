@@ -40,6 +40,17 @@ As configurações vêm de variáveis de ambiente ou de um arquivo `.env` (veja 
 | `INCREMENTAL_REFRESH_INTERVAL_MINUTES` | `15` | Intervalo da incremental. |
 | `INCREMENTAL_TOP_N` | `200` | Produtos atualizados por execução incremental. |
 
+## Qualidade dos dados e retenção
+
+| Variável | Padrão | Descrição |
+| --- | --- | --- |
+| `DISAPPEAR_AFTER_CRAWLS` | `3` | Coletas completas seguidas sem um produto antes de marcá-lo como desaparecido. |
+| `DISAPPEAR_MIN_RATIO` | `0.5` | Uma coleta que encontra uma fatia menor dos produtos conhecidos é tratada como quebrada e ignorada. |
+| `PARSE_FAILURE_ALERT_RATIO` / `PARSE_FAILURE_ALERT_MIN` | `0.2` / `10` | Uma coleta completa com pelo menos essas tentativas e taxa de falha maior emite `garimpo.error.parse_spike` e envia o sinal de falha. |
+| `PARSE_FAILURE_SAMPLES_KEEP` / `PARSE_SAMPLE_BYTES` | `50` / `20000` | Quantas páginas com falha ficam para o `GET /admin/parse-failures` e quanto HTML de cada. |
+| `RETENTION_RUNS_DAYS` | `90` | Coletas finalizadas mais antigas que isso são apagadas diariamente (0 mantém tudo). |
+| `RETENTION_HISTORY_DAYS` | `0` | O histórico de preços mais antigo que isso é apagado (0, o padrão, mantém para sempre). |
+
 ## Backups, sinais de vida, frescor e métricas
 
 | Variável | Padrão | Descrição |

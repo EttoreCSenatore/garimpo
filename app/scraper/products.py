@@ -10,6 +10,7 @@ import structlog
 from selectolax.lexbor import LexborHTMLParser as HTMLParser
 
 from app.events import emit
+from app.failures import record_parse_failure
 from app.models import Installments, ProductStatus
 from app.scraper.client import RateLimitedClient
 from app.security import safe_http_url
@@ -237,8 +238,11 @@ async def fetch_and_parse_product(
     url: str,
     category_id: int | None = None,
 ) -> dict | None:
+    html: str | None = None
+    status: int | None = None
     try:
         resp = await client.get_raw(url)
+        status = resp.status_code
         if resp.status_code == 404:
             return {
                 "id": _extract_id(url),
@@ -246,7 +250,11 @@ async def fetch_and_parse_product(
                 "url": url,
             }
         resp.raise_for_status()
-        return parse_product(resp.text, url, category_id)
+        html = resp.text
+        result = parse_product(html, url, category_id)
+        if result["name"] == "Unknown Product":
+            raise ValueError("page has no product data (markup changed?)")
+        return result
     except Exception as exc:
         logger.error("scraper.parse_error", url=url, error=str(exc))
         emit(
@@ -256,6 +264,7 @@ async def fetch_and_parse_product(
                 "error": str(exc),
             }
         )
+        record_parse_failure(url, f"{type(exc).__name__}: {exc}", http_status=status, html=html)
         return None
 
 

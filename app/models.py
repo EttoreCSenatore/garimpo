@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from enum import Enum
 
-from sqlmodel import JSON, Column, Field, SQLModel
+from sqlmodel import JSON, Column, Field, Index, SQLModel
 
 
 def utcnow() -> datetime:
@@ -37,6 +37,12 @@ class Category(SQLModel, table=True):
 
 class Product(SQLModel, table=True):
     __tablename__ = "products"
+    __table_args__ = (
+        Index("ix_products_category_id", "category_id"),
+        Index("ix_products_brand", "brand"),
+        Index("ix_products_status", "status"),
+        Index("ix_products_view_count", "view_count"),
+    )
 
     id: int = Field(primary_key=True)
     slug: str = Field(max_length=255)
@@ -59,10 +65,13 @@ class Product(SQLModel, table=True):
     created_at: datetime = Field(default_factory=utcnow)
     updated_at: datetime = Field(default_factory=utcnow)
     view_count: int = Field(default=0)
+    # Consecutive full crawls whose listings did not contain this product (disappearance detection).
+    missing_crawls: int = Field(default=0)
 
 
 class ProductHistory(SQLModel, table=True):
     __tablename__ = "product_history"
+    __table_args__ = (Index("ix_product_history_scraped_at", "product_id", "scraped_at"),)
 
     id: int | None = Field(default=None, primary_key=True)
     product_id: int = Field(foreign_key="products.id", index=True)
@@ -75,6 +84,7 @@ class ProductHistory(SQLModel, table=True):
 
 class ScrapeRun(SQLModel, table=True):
     __tablename__ = "scrape_runs"
+    __table_args__ = (Index("ix_scrape_runs_started_at", "started_at"),)
 
     id: int | None = Field(default=None, primary_key=True)
     run_type: str = Field(max_length=32)  # "full" | "incremental" | "single"
@@ -85,3 +95,17 @@ class ScrapeRun(SQLModel, table=True):
     products_disappeared: int = Field(default=0)
     status: str = Field(default="running", max_length=32)  # running | completed | failed
     error_message: str | None = Field(default=None)
+
+
+class ParseFailure(SQLModel, table=True):
+    """The latest pages that failed to parse, with a sample of the HTML for debugging."""
+
+    __tablename__ = "parse_failures"
+    __table_args__ = (Index("ix_parse_failures_created_at", "created_at"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    url: str = Field(max_length=1024)
+    error: str = Field(max_length=1024)
+    http_status: int | None = Field(default=None)
+    html_sample: str | None = Field(default=None)
+    created_at: datetime = Field(default_factory=utcnow)

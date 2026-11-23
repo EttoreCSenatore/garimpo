@@ -78,7 +78,7 @@ async def lifespan(app: FastAPI):
             restore_test_job,
             "cron",
             day_of_week=settings.restore_test_weekday,
-            hour=settings.backup_hour_utc + 1,
+            hour=(settings.backup_hour_utc + 1) % 24,
             minute=0,
             timezone="UTC",
             id="restore_test",
@@ -86,6 +86,19 @@ async def lifespan(app: FastAPI):
             max_instances=1,
             coalesce=True,
         )
+    from app.retention import retention_job
+
+    scheduler.add_job(
+        retention_job,
+        "cron",
+        hour=(settings.backup_hour_utc + 2) % 24,
+        minute=0,
+        timezone="UTC",
+        id="retention",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
     scheduler.start()
     logger.info("scheduler.started")
 

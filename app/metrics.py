@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from sqlmodel import Session, func, select
 
 from app import backup
-from app.models import Product, ProductStatus, ScrapeRun
+from app.models import ParseFailure, Product, ProductStatus, ScrapeRun
 from app.version import __version__
 
 
@@ -35,6 +35,21 @@ def render(db: Session) -> str:
         "Products by status.",
         "gauge",
         [({"status": s.value}, float(counts.get(s, 0))) for s in ProductStatus],
+    )
+
+    missing = db.exec(select(func.count()).select_from(Product).where(Product.missing_crawls > 0)).one()
+    metric(
+        "garimpo_products_missing_crawls",
+        "Active products absent from the last full crawl (disappearance candidates).",
+        "gauge",
+        [({}, float(missing))],
+    )
+    stored = db.exec(select(func.count()).select_from(ParseFailure)).one()
+    metric(
+        "garimpo_parse_failure_samples",
+        "Stored samples of pages that failed to parse (see /admin/parse-failures).",
+        "gauge",
+        [({}, float(stored))],
     )
 
     runs = db.exec(select(ScrapeRun).where(ScrapeRun.completed_at.is_not(None))).all()

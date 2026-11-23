@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from contextlib import contextmanager
+from pathlib import Path
 
 import structlog
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import Session, create_engine
 
 from app.config import settings
 
@@ -12,16 +13,40 @@ connect_args = {"check_same_thread": False}
 engine = create_engine(settings.database_url, echo=False, connect_args=connect_args)
 
 
+BASELINE_REVISION = "0001"
+
+
 def init_db() -> None:
     from app import models  # noqa: F401  ensure models are registered
 
-    SQLModel.metadata.create_all(engine)
     _enable_wal()
-    _ensure_indexes()
+    run_migrations()
     _close_stale_runs()
     from app.search.fts import ensure_search_index
 
     ensure_search_index(engine)
+
+
+def run_migrations(target_engine=None) -> None:
+    """Bring the schema to the newest Alembic revision.
+
+    A database created before migrations existed (it has tables but no ``alembic_version``)
+    is adopted: it is stamped at the baseline revision, which is exactly its schema, and then
+    upgraded like any other.
+    """
+    from alembic import command
+    from alembic.config import Config
+    from sqlalchemy import inspect
+
+    target = target_engine or engine
+    cfg = Config()
+    cfg.set_main_option("script_location", str(Path(__file__).parent / "migrations"))
+    with target.begin() as connection:
+        cfg.attributes["connection"] = connection
+        tables = set(inspect(connection).get_table_names())
+        if "alembic_version" not in tables and "products" in tables:
+            command.stamp(cfg, BASELINE_REVISION)
+        command.upgrade(cfg, "head")
 
 
 def _enable_wal() -> None:
@@ -42,23 +67,6 @@ def get_session() -> Iterator[Session]:
 def session_scope() -> Iterator[Session]:
     with Session(engine, expire_on_commit=False) as session:
         yield session
-
-
-# create_all() does not add indexes to tables that already exist, so they are created idempotently.
-_INDEXES = (
-    "CREATE INDEX IF NOT EXISTS ix_products_category_id ON products (category_id)",
-    "CREATE INDEX IF NOT EXISTS ix_products_brand ON products (brand)",
-    "CREATE INDEX IF NOT EXISTS ix_products_status ON products (status)",
-    "CREATE INDEX IF NOT EXISTS ix_products_view_count ON products (view_count)",
-    "CREATE INDEX IF NOT EXISTS ix_product_history_scraped_at ON product_history (product_id, scraped_at)",
-    "CREATE INDEX IF NOT EXISTS ix_scrape_runs_started_at ON scrape_runs (started_at)",
-)
-
-
-def _ensure_indexes() -> None:
-    with engine.begin() as conn:
-        for statement in _INDEXES:
-            conn.exec_driver_sql(statement)
 
 
 def _close_stale_runs() -> None:

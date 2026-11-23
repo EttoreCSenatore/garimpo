@@ -1,6 +1,32 @@
 # Release history: the single source for the "What's new" page, GET /api/releases and the
 # GitHub Release notes (scripts/release_notes.py). Newest first. Texts in English and Portuguese.
 # kind: new | improvement | fix | security
+- version: 0.5.0
+  date: 2026-11-22
+  title:
+    en: Safer data - migrations, disappearance detection and parser resilience
+    pt-br: Dados mais seguros - migrações, detecção de desaparecimento e resiliência do parser
+  items:
+    - kind: improvement
+      text:
+        en: The database schema is now versioned with Alembic migrations; existing databases are adopted automatically.
+        pt-br: O esquema do banco agora é versionado com migrações do Alembic; os bancos existentes são adotados automaticamente.
+    - kind: new
+      text:
+        en: Products that stop being listed are marked as disappeared after three full crawls without them; a broken crawl never empties the catalog.
+        pt-br: Produtos que deixam de ser listados são marcados como desaparecidos após três coletas completas sem eles; uma coleta quebrada nunca esvazia o catálogo.
+    - kind: new
+      text:
+        en: Pages that fail to parse are stored with an HTML sample (GET /admin/parse-failures), and a failure-rate spike raises an alert.
+        pt-br: Páginas que falham na leitura são guardadas com uma amostra do HTML (GET /admin/parse-failures), e um pico de falhas dispara um alerta.
+    - kind: improvement
+      text:
+        en: Old scrape runs are pruned after 90 days; price history is kept.
+        pt-br: Coletas antigas são apagadas após 90 dias; o histórico de preços é mantido.
+    - kind: improvement
+      text:
+        en: Pull requests that change the schema get an automatic report with the SQL and an upgrade/downgrade test.
+        pt-br: Pull requests que mudam o esquema recebem um relatório automático com o SQL e um teste de subir e descer.
 - version: 0.4.0
   date: 2026-11-22
   title:

@@ -56,10 +56,20 @@ scrape_configs:
     static_configs: [{targets: ["garimpo:8000"]}]
 ```
 
+Also: `garimpo_products_missing_crawls` (candidates for disappearance) and `garimpo_parse_failure_samples`.
+
 Useful alerts: `time() - garimpo_last_success_timestamp_seconds{run_type="full"} > 8*3600`, `garimpo_last_run_failed == 1`, `garimpo_restore_test_ok == 0`, and a spike of `garimpo_last_run_products_failed` (the store changed its markup; the [canary](./development#scraper-canary) usually says so first).
 
 Keep `/metrics` behind your reverse proxy or on an internal network.
 
+## When the store changes its pages
+
+1. The weekly [canary](./development#scraper-canary) fails, or a full run logs `garimpo.error.parse_spike` (and pings the failure heartbeat).
+2. Read the newest failing pages: `curl -H "X-Admin-Token: $ADMIN_TOKEN" "http://127.0.0.1:8000/admin/parse-failures?limit=5&full=true"` gives the URL, the error, the HTTP status and the start of the HTML.
+3. Add that HTML as a fixture in `tests/fixtures/`, fix the parser until the test passes, release.
+
+A page that parses but has no product name counts as a failure too, so a redesign cannot silently fill the catalog with empty products.
+
 ## Logs and events
 
-Everything is JSON on stdout (`docker compose logs -f app`). Domain events: `garimpo.run.started|completed`, `garimpo.product.scraped|updated|disappeared`, `garimpo.backup.completed|restore_tested`, and `garimpo.error.parse|http|backup|restore_test`.
+Everything is JSON on stdout (`docker compose logs -f app`). Domain events: `garimpo.run.started|completed`, `garimpo.product.scraped|updated|disappeared`, `garimpo.backup.completed|restore_tested`, and `garimpo.error.parse|parse_spike|crawl_incomplete|http|backup|restore_test` and `garimpo.retention.applied`.

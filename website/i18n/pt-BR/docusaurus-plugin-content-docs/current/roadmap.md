@@ -59,7 +59,9 @@ Cada marco é um punhado de PRs pequenos, em ordem de valor pelo esforço.
 - **Documentação:** seção de Operação: instalar, atualizar, backup e restauração, monitoramento, logs.
 - Implantação de referência: compose com proxy reverso TLS (Caddy) e um timer do systemd para os backups.
 
-### M4: Dados e correção
+### M4: Dados e correção (quase concluído)
+
+Feito: migrações com Alembic e relatório no PR, detecção de desaparecimento pelas coletas, resiliência do parser (amostras de falha e alerta de pico), retenção. Adiado (decisão 022): opção PostgreSQL com limites no Redis e sinônimos aprendidos do catálogo.
 
 - **Migrações com Alembic** no lugar do `create_all`; um workflow nos PRs que mostra o SQL de cada migração e testa subir e descer em uma cópia.
 - **Detectar produtos que sumiram nas coletas:** marcar como ausente após N coletas completas seguidas sem o produto, não só em um 404.
