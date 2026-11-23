@@ -1,6 +1,32 @@
 # Release history: the single source for the "What's new" page, GET /api/releases and the
 # GitHub Release notes (scripts/release_notes.py). Newest first. Texts in English and Portuguese.
 # kind: new | improvement | fix | security
+- version: 0.4.0
+  date: 2026-11-22
+  title:
+    en: Operations - backups, heartbeats, metrics and freshness warnings
+    pt-br: Operação - backups, sinais de vida, métricas e avisos de frescor
+  items:
+    - kind: new
+      text:
+        en: A daily online SQLite backup with retention, and a weekly restore test of the newest backup.
+        pt-br: Um backup online diário do SQLite com retenção e um teste semanal de restauração do backup mais novo.
+    - kind: new
+      text:
+        en: Optional heartbeat pings per job (Healthchecks.io style), so a silent scraper is noticed.
+        pt-br: Sinais de vida opcionais por tarefa (estilo Healthchecks.io), para notar um scraper silencioso.
+    - kind: new
+      text:
+        en: Prometheus metrics at /metrics (off by default, optional Bearer token).
+        pt-br: Métricas Prometheus em /metrics (desligadas por padrão, token Bearer opcional).
+    - kind: improvement
+      text:
+        en: The health endpoint reports catalog age, a stale flag and backup status, and the chat warns visitors when the catalog is old.
+        pt-br: O endpoint de saúde informa a idade do catálogo, um indicador de atraso e o status do backup, e o chat avisa os visitantes quando o catálogo está velho.
+    - kind: improvement
+      text:
+        en: New Operations docs - backup and restore, monitoring and upgrading.
+        pt-br: Novas páginas de Operação - backup e restauração, monitoramento e atualização.
 - version: 0.3.0
   date: 2026-11-22
   title:

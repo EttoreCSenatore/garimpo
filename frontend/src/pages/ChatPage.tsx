@@ -61,6 +61,7 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<string | null>(null)
   const [version, setVersion] = useState<string | null>(null)
+  const [staleAgeHours, setStaleAgeHours] = useState<number | null>(null)
   const [showNews, setShowNews] = useState(false)
 
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -71,6 +72,9 @@ export default function ChatPage() {
     fetch('/api/')
       .then((r) => r.json())
       .then((data) => {
+        if (data.stale && typeof data.catalog_age_seconds === 'number') {
+          setStaleAgeHours(Math.floor(data.catalog_age_seconds / 3600))
+        }
         if (data.last_refresh) {
           setLastUpdated(
             new Intl.DateTimeFormat('pt-BR', {
@@ -182,6 +186,12 @@ export default function ChatPage() {
           )}
         </div>
       </header>
+
+      {staleAgeHours !== null && (
+        <div role="status" className="flex-shrink-0 bg-amber-50 border-b border-amber-200 px-4 py-1.5 text-center text-xs text-amber-800">
+          O catálogo está desatualizado (última atualização há {staleAgeHours} h). Preços e estoque podem ter mudado.
+        </div>
+      )}
 
       {/* Chat area */}
       <div

@@ -39,3 +39,18 @@ As configurações vêm de variáveis de ambiente ou de um arquivo `.env` (veja 
 | `FULL_REFRESH_INTERVAL_MINUTES` | `360` | Intervalo da coleta completa. |
 | `INCREMENTAL_REFRESH_INTERVAL_MINUTES` | `15` | Intervalo da incremental. |
 | `INCREMENTAL_TOP_N` | `200` | Produtos atualizados por execução incremental. |
+
+## Backups, sinais de vida, frescor e métricas
+
+| Variável | Padrão | Descrição |
+| --- | --- | --- |
+| `BACKUP_ENABLED` | `true` | Backup diário do SQLite e teste semanal de restauração (ignorado para outros bancos). |
+| `BACKUP_DIR` | *(ao lado do banco)* | Onde ficam os backups e o `status.json`. |
+| `BACKUP_HOUR_UTC` | `6` | Hora do backup diário; o teste de restauração roda uma hora depois. |
+| `BACKUP_KEEP` | `14` | Backups mantidos; os mais antigos são apagados. |
+| `RESTORE_TEST_WEEKDAY` | `sun` | Dia do teste semanal de restauração. |
+| `HEARTBEAT_FULL_URL`, `HEARTBEAT_INCREMENTAL_URL`, `HEARTBEAT_BACKUP_URL`, `HEARTBEAT_RESTORE_URL` | *(vazio)* | URLs de sinal de vida; vazio desativa. Veja [Monitoramento](./monitoring). |
+| `STALE_AFTER_HOURS` | `24` | `stale: true` em `/api/health` (e um aviso no chat) quando não houve atualização bem-sucedida nesse prazo. |
+| `BACKUP_STALE_HOURS` | `26` | O backup é considerado atrasado após esse prazo. |
+| `METRICS_ENABLED` | `false` | Serve métricas Prometheus em `/metrics`. |
+| `METRICS_TOKEN` | *(vazio)* | Token Bearer opcional exigido pelo `/metrics`. |

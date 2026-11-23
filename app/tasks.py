@@ -8,6 +8,7 @@ from sqlmodel import select
 from app.config import settings
 from app.db import session_scope
 from app.events import emit
+from app.heartbeat import ping
 from app.models import Category, Product, ProductHistory, ProductStatus, ScrapeRun
 from app.scraper.categories import discover_categories
 from app.scraper.client import RateLimitedClient
@@ -245,6 +246,7 @@ async def _run_full_refresh() -> None:
                 session.add(r)
                 session.commit()
 
+        await ping(settings.heartbeat_full_url)
         emit(
             {
                 "event_type": "garimpo.run.completed",
@@ -258,6 +260,7 @@ async def _run_full_refresh() -> None:
         )
     except Exception as exc:
         logger.error("task.full_refresh.error", error=str(exc))
+        await ping(settings.heartbeat_full_url, ok=False)
         with session_scope() as session:
             r = session.get(ScrapeRun, run_id)
             if r:
@@ -323,6 +326,7 @@ async def _run_incremental_refresh() -> None:
                 session.add(r)
                 session.commit()
 
+        await ping(settings.heartbeat_incremental_url)
         emit(
             {
                 "event_type": "garimpo.run.completed",
@@ -335,6 +339,7 @@ async def _run_incremental_refresh() -> None:
         )
     except Exception as exc:
         logger.error("task.incremental_refresh.error", error=str(exc))
+        await ping(settings.heartbeat_incremental_url, ok=False)
         with session_scope() as session:
             r = session.get(ScrapeRun, run_id)
             if r:

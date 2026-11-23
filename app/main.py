@@ -60,6 +60,32 @@ async def lifespan(app: FastAPI):
         max_instances=1,
         coalesce=True,
     )
+    from app.backup import backup_job, database_path, restore_test_job
+
+    if settings.backup_enabled and database_path() is not None:
+        scheduler.add_job(
+            backup_job,
+            "cron",
+            hour=settings.backup_hour_utc,
+            minute=0,
+            timezone="UTC",
+            id="backup",
+            replace_existing=True,
+            max_instances=1,
+            coalesce=True,
+        )
+        scheduler.add_job(
+            restore_test_job,
+            "cron",
+            day_of_week=settings.restore_test_weekday,
+            hour=settings.backup_hour_utc + 1,
+            minute=0,
+            timezone="UTC",
+            id="restore_test",
+            replace_existing=True,
+            max_instances=1,
+            coalesce=True,
+        )
     scheduler.start()
     logger.info("scheduler.started")
 
