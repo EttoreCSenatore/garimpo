@@ -22,6 +22,8 @@ def _reset_rate_limiters():
 
     security.chat_rate_limit._hits.clear()
     security.image_rate_limit._hits.clear()
+    security.watch_rate_limit._hits.clear()
     yield
     security.chat_rate_limit._hits.clear()
     security.image_rate_limit._hits.clear()
+    security.watch_rate_limit._hits.clear()

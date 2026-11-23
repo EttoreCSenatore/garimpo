@@ -110,6 +110,7 @@ class RateLimiter:
 
 chat_rate_limit = RateLimiter("chat", lambda: settings.chat_rate_limit_per_minute)
 image_rate_limit = RateLimiter("image", lambda: settings.image_rate_limit_per_minute)
+watch_rate_limit = RateLimiter("watch", lambda: settings.watch_rate_limit_per_minute)
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):

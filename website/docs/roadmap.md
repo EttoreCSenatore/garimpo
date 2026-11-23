@@ -70,7 +70,9 @@ Done: Alembic migrations with a PR report, disappearance detection from crawls, 
 - **PostgreSQL option** with the same migrations, for people who want more than one instance; move rate limits and chat sessions to Redis only if that happens.
 - Smarter relevance: synonyms learned from the catalog.
 
-### M5: Features for shoppers
+### M5: Features for shoppers (done)
+
+Done: Explore (filters and sorting), Deals, alerts for price drops and restocks (ntfy and allow-listed webhooks, per-size). Not built in: Telegram and e-mail (decision 024).
 
 - Filters and sorting next to the chat (size in stock, brand, price range, category).
 - **Deals page:** biggest drops against the product's own price history, with "lowest in 90 days".

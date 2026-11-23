@@ -109,3 +109,28 @@ class ParseFailure(SQLModel, table=True):
     http_status: int | None = Field(default=None)
     html_sample: str | None = Field(default=None)
     created_at: datetime = Field(default_factory=utcnow)
+
+
+class Watch(SQLModel, table=True):
+    """A shopper's alert: price drops and restocks of one product, delivered to ntfy or a webhook.
+
+    There are no accounts: ``watcher_id`` is a random secret the browser keeps and sends as a
+    header, and it is the only key to its watches. ``destination`` is an ntfy topic or a webhook
+    URL the shopper chose; it is never returned in full by the API.
+    """
+
+    __tablename__ = "watches"
+    __table_args__ = (Index("ix_watches_watcher_id", "watcher_id"), Index("ix_watches_product_id", "product_id"))
+
+    id: int | None = Field(default=None, primary_key=True)
+    watcher_id: str = Field(max_length=64)
+    product_id: int = Field(foreign_key="products.id")
+    size: str | None = Field(default=None, max_length=32)
+    target_price: Decimal | None = Field(default=None)
+    channel: str = Field(max_length=16)  # "ntfy" | "webhook"
+    destination: str = Field(max_length=512)
+    # State, updated on every evaluation: the price to beat and whether the product/size was buyable.
+    baseline_price: Decimal | None = Field(default=None)
+    last_available: bool = Field(default=False)
+    created_at: datetime = Field(default_factory=utcnow)
+    last_notified_at: datetime | None = Field(default=None)

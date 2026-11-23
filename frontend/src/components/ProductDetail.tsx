@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import type { Product } from '../types'
 import PriceHistory from './PriceHistory'
+import WatchBox from './WatchBox'
 import { formatPrice, getImageUrl, installmentsLabel, safeHttpUrl } from '../lib'
 
 interface Props {
@@ -123,6 +124,8 @@ export default function ProductDetail({ product, onClose }: Props) {
             )}
 
             <PriceHistory productId={product.id} />
+
+            <WatchBox product={product} />
 
             {product.description && (
               <div>

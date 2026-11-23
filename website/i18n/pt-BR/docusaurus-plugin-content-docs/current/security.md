@@ -21,6 +21,7 @@ Para reportar uma vulnerabilidade, use o formulário privado de advisories do re
 | **Abuso e DoS** | Limites de taxa por cliente, sessões de chat limitadas, limites de tamanho, um rastreador por vez, atualizações em andamento limitadas. |
 | **Injeção** | ORM com parâmetros vinculados; o texto do usuário usado em `LIKE` é escapado, e as buscas de texto completo são remontadas só com palavras (entre aspas, como parâmetro), então operadores do FTS5 digitados pelo usuário não têm efeito. |
 | **Segredos** | `.env`, bancos e buffers estão no `.gitignore`; secret scanning e push protection estão ativos no repositório. |
+| **Avisos (SSRF)** | Desligados por padrão. O ntfy vai só para o servidor configurado; webhooks só para hosts HTTPS exatos de uma lista de quem opera (sem IPs, conferidos de novo no envio, sem seguir redirecionamentos). Os avisos usam como chave um segredo aleatório do navegador, com limite de taxa e teto. |
 | **Cadeia de suprimentos** | Dependabot, `pip-audit` e `npm audit` no CI, CodeQL em cada pull request. |
 | **Contêiner** | Sem root, sistema de arquivos somente leitura, sem capabilities, porta presa ao loopback. |
 

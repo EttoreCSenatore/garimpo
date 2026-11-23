@@ -40,6 +40,16 @@ As configurações vêm de variáveis de ambiente ou de um arquivo `.env` (veja 
 | `INCREMENTAL_REFRESH_INTERVAL_MINUTES` | `15` | Intervalo da incremental. |
 | `INCREMENTAL_TOP_N` | `200` | Produtos atualizados por execução incremental. |
 
+## Avisos
+
+| Variável | Padrão | Descrição |
+| --- | --- | --- |
+| `ALERTS_ENABLED` | `false` | Liga os avisos e o envio de notificações (requisições de saída). |
+| `ALERTS_NTFY_SERVER` | `https://ntfy.sh` | Servidor ntfy que recebe os avisos. |
+| `ALERTS_WEBHOOK_HOSTS` | *(vazio)* | Hosts HTTPS exatos que um webhook pode alcançar, separados por vírgula; vazio desativa o canal de webhook. |
+| `ALERTS_MAX_WATCHES_PER_WATCHER` | `20` | Avisos por navegador. |
+| `WATCH_RATE_LIMIT_PER_MINUTE` | `20` | Limite por cliente para criar avisos. |
+
 ## Qualidade dos dados e retenção
 
 | Variável | Padrão | Descrição |

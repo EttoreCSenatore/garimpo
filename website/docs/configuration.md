@@ -40,6 +40,16 @@ Settings come from environment variables or a `.env` file (see `.env.example`). 
 | `INCREMENTAL_REFRESH_INTERVAL_MINUTES` | `15` | Incremental interval. |
 | `INCREMENTAL_TOP_N` | `200` | Products refreshed per incremental run. |
 
+## Alerts
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `ALERTS_ENABLED` | `false` | Turns on watches and notification delivery (outbound requests). |
+| `ALERTS_NTFY_SERVER` | `https://ntfy.sh` | ntfy server that receives the alerts. |
+| `ALERTS_WEBHOOK_HOSTS` | *(empty)* | Exact HTTPS hosts a webhook may target, comma-separated; empty disables the webhook channel. |
+| `ALERTS_MAX_WATCHES_PER_WATCHER` | `20` | Watches per browser. |
+| `WATCH_RATE_LIMIT_PER_MINUTE` | `20` | Per-client limit on creating watches. |
+
 ## Data quality and retention
 
 | Variable | Default | Description |

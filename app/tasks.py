@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 import structlog
 from sqlmodel import select
 
+from app import alerts
 from app.config import settings
 from app.db import session_scope
 from app.events import emit
@@ -160,6 +161,9 @@ async def _emit_product_events(product: Product, changed: bool, disappeared: boo
                 "new_available": product.available,
             }
         )
+
+    # Shoppers watching this product (no-op unless ALERTS_ENABLED and there are watches).
+    await alerts.process(product)
 
 
 async def refresh_single_product_async(product_id: int) -> None:

@@ -52,3 +52,29 @@ export interface ChatApiResponse {
   products: Product[]
   comparison?: Comparison | null
 }
+
+export interface Deal {
+  discount_pct: number
+  was: number
+  now: number
+  days: number
+  product: Product
+}
+
+export interface Facets {
+  brands: { brand: string; count: number }[]
+  sizes: { size: string; count: number }[]
+  categories: { id: number; name: string | null; count: number }[]
+  price: { min: number | null; max: number | null }
+}
+
+export interface WatchView {
+  id: number
+  product_id: number
+  size: string | null
+  target_price: number | null
+  channel: string
+  destination: string
+  created_at: string
+  last_notified_at: string | null
+}

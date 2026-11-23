@@ -1,6 +1,28 @@
 # Release history: the single source for the "What's new" page, GET /api/releases and the
 # GitHub Release notes (scripts/release_notes.py). Newest first. Texts in English and Portuguese.
 # kind: new | improvement | fix | security
+- version: 0.6.0
+  date: 2026-11-22
+  title:
+    en: Shop the catalog - explore, real deals and alerts
+    pt-br: Compre pelo catálogo - explorar, ofertas de verdade e avisos
+  items:
+    - kind: new
+      text:
+        en: A new Explore tab filters the catalog by text, brand, size in stock and price, with sorting and paging.
+        pt-br: Uma nova aba Explorar filtra o catálogo por texto, marca, tamanho em estoque e preço, com ordenação e paginação.
+    - kind: new
+      text:
+        en: A Deals tab (and the chat's "ofertas") lists products at their lowest recorded price, with the drop computed from our own price history.
+        pt-br: Uma aba Ofertas (e o "ofertas" do chat) lista produtos no menor preço registrado, com a queda calculada pelo nosso próprio histórico de preços.
+    - kind: new
+      text:
+        en: "\"Avisar-me\" alerts for price drops, a target price and sizes coming back in stock, delivered by ntfy or an allowed webhook, with no accounts (off until the operator enables alerts)."
+        pt-br: "Avisos \"Avisar-me\" para quedas de preço, preço-alvo e tamanhos que voltam ao estoque, enviados por ntfy ou por um webhook permitido, sem contas (desligados até quem opera ativar)."
+    - kind: security
+      text:
+        en: Alert delivery can only reach the configured ntfy server and exact allow-listed HTTPS hosts.
+        pt-br: A entrega de avisos só alcança o servidor ntfy configurado e hosts HTTPS exatos de uma lista permitida.
 - version: 0.5.0
   date: 2026-11-22
   title:
