@@ -3,6 +3,7 @@
 Kept separate from ``app.api.routes`` so that ``app.tasks`` does not have to
 import the router (which previously created a circular dependency).
 """
+
 from __future__ import annotations
 
 import asyncio

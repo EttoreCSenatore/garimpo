@@ -55,7 +55,6 @@ class Settings(BaseSettings):
     chat_max_message_length: int = 500
     chat_max_sessions: int = 5000
 
-
     scheduler_enabled: bool = True
     full_refresh_interval_minutes: int = 360
     incremental_refresh_interval_minutes: int = 15
@@ -69,18 +68,47 @@ class Settings(BaseSettings):
     def robots_disallowed(self) -> list[str]:
         # Mirrors the store's robots.txt (Magento) plus the paths blocked since the old platform.
         return [
-            "/admin", "/app", "/downloader", "/errors", "/includes", "/lib", "/pkginfo", "/shell",
-            "/var", "/checkout", "/onestepcheckout", "/customer", "/wishlist", "/sendfriend",
-            "/review", "/index.php", "/catalogsearch", "/catalog/product_compare",
-            "/catalog/category/view", "/catalog/product/view", "/cgi-bin", "/tivadm43", "/homologacao",
+            "/admin",
+            "/app",
+            "/downloader",
+            "/errors",
+            "/includes",
+            "/lib",
+            "/pkginfo",
+            "/shell",
+            "/var",
+            "/checkout",
+            "/onestepcheckout",
+            "/customer",
+            "/wishlist",
+            "/sendfriend",
+            "/review",
+            "/index.php",
+            "/catalogsearch",
+            "/catalog/product_compare",
+            "/catalog/category/view",
+            "/catalog/product/view",
+            "/cgi-bin",
+            "/tivadm43",
+            "/homologacao",
         ]
 
     @property
     def robots_disallowed_params(self) -> set[str]:
         """Query parameters robots.txt forbids on listings (sorting, view modes, filters, sessions)."""
         return {
-            "product_list_order", "product_list_dir", "product_list_mode", "product_list_limit",
-            "dir", "limit", "mode", "price", "manufacturer", "color", "tamanho", "sid",
+            "product_list_order",
+            "product_list_dir",
+            "product_list_mode",
+            "product_list_limit",
+            "dir",
+            "limit",
+            "mode",
+            "price",
+            "manufacturer",
+            "color",
+            "tamanho",
+            "sid",
         }
 
     @property

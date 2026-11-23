@@ -4,6 +4,7 @@ Run by the weekly ``Scraper canary`` workflow, or by hand: ``python -m app.canar
 It fails (exit code 1) when the store's markup changed enough to break parsing, so
 a redesign is noticed within days instead of after a silent empty scrape.
 """
+
 from __future__ import annotations
 
 import asyncio

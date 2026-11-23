@@ -1,16 +1,36 @@
+# Version updates wait 7 days after a release (a compromised package is usually pulled within
+# days); security updates ignore the cooldown and arrive at once. Locks: deploy/lock.sh.
 version: 2
 updates:
   - package-ecosystem: pip
     directory: /
+    allow:
+      - dependency-type: all  # indirect libraries are pinned in the hashed locks too
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     groups:
       python-minor-patch:
         update-types: [minor, patch]
+  # pip-tools itself, locked in deploy/pip-tools.txt
+  - package-ecosystem: pip
+    directory: /deploy
+    allow:
+      - dependency-type: all
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+    groups:
+      pip-tools:
+        patterns: ["*"]
   - package-ecosystem: npm
     directory: /frontend
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     groups:
       frontend-minor-patch:
         update-types: [minor, patch]
@@ -22,6 +42,8 @@ updates:
     directory: /website
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     groups:
       docs-minor-patch:
         update-types: [minor, patch]
@@ -32,6 +54,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     groups:
       actions:
         patterns: ["*"]
@@ -39,6 +63,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     ignore:
       # Stay on a released, supported Python line; bump deliberately.
       - dependency-name: python

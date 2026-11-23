@@ -375,7 +375,9 @@ def test_chat_guided_flow_skip_preferences(client, db_session):
 def test_chat_endpoint_chuteira_nike(client, db_session):
     """Regression: 'chuteira nike' must find products with 'chuteira' in the
     name even when breadcrumbs are empty and no 'futebol' text exists."""
-    category = Category(id=93, slug="chuteiras-para-campo", url="/c/93-chuteiras-para-campo", name="Chuteiras Para Campo")
+    category = Category(
+        id=93, slug="chuteiras-para-campo", url="/c/93-chuteiras-para-campo", name="Chuteiras Para Campo"
+    )
     db_session.add(category)
     product = Product(
         id=2001,
@@ -428,7 +430,6 @@ def test_chat_endpoint_stock_flag_roundtrip(client, db_session):
             assert p["status"] == "active"
 
 
-
 def _seed_priced(db_session, specs):
     from decimal import Decimal
 
@@ -437,8 +438,15 @@ def _seed_priced(db_session, specs):
     for pid, name, price in specs:
         db_session.add(
             Product(
-                id=pid, slug=f"p-{pid}", url=f"https://www.tivolli.com.br/p-{pid}", name=name,
-                price=Decimal(price), available=True, sizes=["40"], brand="Nike", view_count=pid,
+                id=pid,
+                slug=f"p-{pid}",
+                url=f"https://www.tivolli.com.br/p-{pid}",
+                name=name,
+                price=Decimal(price),
+                available=True,
+                sizes=["40"],
+                brand="Nike",
+                view_count=pid,
             )
         )
     db_session.commit()
@@ -468,7 +476,9 @@ def test_chat_history_reports_price_range(client, db_session):
     _seed_priced(db_session, [(9201, "Bola Nike Campo", "100.00")])
     now = datetime.now(UTC)
     for days, price in ((10, "150.00"), (5, "120.00")):
-        db_session.add(ProductHistory(product_id=9201, price=Decimal(price), available=True, scraped_at=now - timedelta(days=days)))
+        db_session.add(
+            ProductHistory(product_id=9201, price=Decimal(price), available=True, scraped_at=now - timedelta(days=days))
+        )
     db_session.commit()
     sid = "hist-session"
     client.post("/api/chat", json={"message": "bola nike", "session_id": sid})

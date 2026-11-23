@@ -1,0 +1,10 @@
+# Development and CI tools on top of the runtime dependencies. Lock: requirements-dev.txt.
+# Runtime dependencies, at exactly the versions of the runtime lock.
+-r requirements.in
+-c requirements.txt
+pytest>=8.0
+pytest-asyncio>=0.23
+pytest-cov>=5.0
+respx>=0.21
+ruff>=0.6
+pip-audit>=2.7

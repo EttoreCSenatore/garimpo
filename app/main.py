@@ -71,11 +71,13 @@ async def lifespan(app: FastAPI):
 
 async def run_full_refresh_job() -> None:
     from app.tasks import run_full_refresh_async
+
     spawn(run_full_refresh_async())
 
 
 async def run_incremental_refresh_job() -> None:
     from app.tasks import run_incremental_refresh_async
+
     spawn(run_incremental_refresh_async())
 
 

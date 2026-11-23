@@ -3,6 +3,7 @@
 Events go through structlog, so they land on stdout as JSON in production and can be
 shipped by whatever collects container logs (Loki, CloudWatch, a plain ``docker logs``).
 """
+
 from __future__ import annotations
 
 import structlog

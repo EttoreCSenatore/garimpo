@@ -32,7 +32,7 @@ Produto diferente, mesma disciplina. Estas são as práticas que vale adaptar e 
 
 Cada marco é um punhado de PRs pequenos, em ordem de valor pelo esforço.
 
-### M1: Cadeia de suprimentos e CI (cerca de um dia)
+### M1: Cadeia de suprimentos e CI (concluído)
 
 - Fixar toda Action de terceiros em um SHA de commit com a tag em comentário; o Dependabot atualiza os dois.
 - Travar as dependências Python com hashes (`pip-compile --generate-hashes`, trava separada para desenvolvimento) e falhar o CI quando a trava estiver desatualizada.

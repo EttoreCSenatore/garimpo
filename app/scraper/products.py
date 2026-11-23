@@ -153,9 +153,11 @@ def parse_product(html: str, url: str, category_id: int | None = None) -> dict:
 
     name_node = tree.css_first("h1")
     result["name"] = _extract_text(name_node) or ld.get("name") or "Unknown Product"
-    result["codigo"] = (str(ld["sku"])[:64] if ld.get("sku") else None) or _extract_text(
-        tree.css_first(".product.attribute.sku .value")
-    ) or None
+    result["codigo"] = (
+        (str(ld["sku"])[:64] if ld.get("sku") else None)
+        or _extract_text(tree.css_first(".product.attribute.sku .value"))
+        or None
+    )
 
     brand = ld.get("brand")
     result["brand"] = (brand.get("name") if isinstance(brand, dict) else brand) or None

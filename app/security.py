@@ -1,4 +1,5 @@
 """Security helpers: token checks, URL validation, rate limiting, headers."""
+
 from __future__ import annotations
 
 import ipaddress

@@ -32,7 +32,7 @@ Different product, same discipline. These are the practices worth adapting, and 
 
 Each milestone is a handful of small PRs. Order is by value for effort.
 
-### M1: Supply chain and CI hardening (about a day)
+### M1: Supply chain and CI hardening (done)
 
 - Pin every third-party GitHub Action to a commit SHA with the tag in a comment; Dependabot keeps both updated.
 - Lock Python dependencies with hashes (`pip-compile --generate-hashes`, separate dev lock), and fail CI when the lock is stale.

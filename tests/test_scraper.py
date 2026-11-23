@@ -98,7 +98,9 @@ async def test_category_discovery_from_google_sitemap(monkeypatch):
     class FakeClient:
         async def get_raw(self, url):
             assert url.endswith("/google_sitemap.xml")
-            return SimpleNamespace(content=read_fixture("google_sitemap_demo.xml").encode(), raise_for_status=lambda: None)
+            return SimpleNamespace(
+                content=read_fixture("google_sitemap_demo.xml").encode(), raise_for_status=lambda: None
+            )
 
     found = await cats.fetch_categories(FakeClient())
     slugs = [c.slug for c in found]

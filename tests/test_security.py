@@ -34,6 +34,7 @@ def client():
 
 # --- helpers ---------------------------------------------------------------
 
+
 def test_tokens_match_is_strict():
     assert tokens_match("abc", "abc")
     assert not tokens_match("abd", "abc")
@@ -70,6 +71,7 @@ def test_host_allowed_matches_subdomains_only():
 
 # --- admin auth ------------------------------------------------------------
 
+
 def test_admin_disabled_when_token_empty(client, monkeypatch):
     monkeypatch.setattr(settings, "admin_token", "")
     assert client.get("/admin/queue", headers={"X-Admin-Token": ""}).status_code == 401
@@ -93,6 +95,7 @@ def test_production_refuses_weak_admin_token():
 
 
 # --- image proxy (SSRF) ----------------------------------------------------
+
 
 @pytest.mark.parametrize(
     "url",
@@ -121,7 +124,9 @@ def test_image_proxy_serves_allowed_image(client):
 def test_image_proxy_blocks_html_and_svg(client):
     with respx.mock:
         respx.get("https://www.tivolli.com.br/x").mock(
-            return_value=httpx.Response(200, content=b"<script>alert(1)</script>", headers={"content-type": "text/html"})
+            return_value=httpx.Response(
+                200, content=b"<script>alert(1)</script>", headers={"content-type": "text/html"}
+            )
         )
         respx.get("https://www.tivolli.com.br/y.svg").mock(
             return_value=httpx.Response(200, content=b"<svg/>", headers={"content-type": "image/svg+xml"})
@@ -150,6 +155,7 @@ def test_image_proxy_enforces_size_cap(client, monkeypatch):
 
 
 # --- chat input limits, sessions, rate limiting ---------------------------
+
 
 def test_chat_rejects_oversized_message_and_bad_session(client):
     assert client.post("/api/chat", json={"message": "x" * 5000}).status_code == 422
@@ -218,6 +224,7 @@ def test_rate_limiter_zero_disables():
 
 # --- headers, CORS, LIKE escaping -----------------------------------------
 
+
 def test_security_headers_and_cors(client):
     r = client.get("/api/health", headers={"Origin": "http://localhost:5173"})
     assert r.headers["x-frame-options"] == "DENY"
@@ -235,14 +242,21 @@ def test_search_treats_wildcards_literally(client):
     from app.models import Product
 
     session = next(app.dependency_overrides[gdb]())
-    session.add(Product(id=1, slug="a", url="https://www.tivolli.com.br/1-a", name="Tenis 100% Couro", scraped_at=datetime.now(UTC)))
-    session.add(Product(id=2, slug="b", url="https://www.tivolli.com.br/2-b", name="Tenis Basico", scraped_at=datetime.now(UTC)))
+    session.add(
+        Product(
+            id=1, slug="a", url="https://www.tivolli.com.br/1-a", name="Tenis 100% Couro", scraped_at=datetime.now(UTC)
+        )
+    )
+    session.add(
+        Product(id=2, slug="b", url="https://www.tivolli.com.br/2-b", name="Tenis Basico", scraped_at=datetime.now(UTC))
+    )
     session.commit()
     names = [i["name"] for i in client.get("/products", params={"q": "%"}).json()["items"]]
     assert names == ["Tenis 100% Couro"]
 
 
 # --- scraper hardening -----------------------------------------------------
+
 
 def test_listing_extraction_drops_foreign_and_script_urls():
     from app.scraper.listings import extract_product_urls
@@ -261,7 +275,12 @@ async def test_client_refuses_robots_disallowed_and_foreign_hosts():
     from app.scraper.client import DisallowedRequestError, RateLimitedClient
 
     c = RateLimitedClient(jitter_min_ms=0, jitter_max_ms=0, requests_per_second=1000)
-    for target in ["/tivadm43/login", "https://www.tivolli.com.br/homologacao/x", "https://evil.com/a", "file:///etc/passwd"]:
+    for target in [
+        "/tivadm43/login",
+        "https://www.tivolli.com.br/homologacao/x",
+        "https://evil.com/a",
+        "file:///etc/passwd",
+    ]:
         with pytest.raises(DisallowedRequestError):
             await c.get_raw(target)
     await c.close()

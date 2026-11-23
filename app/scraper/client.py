@@ -92,7 +92,9 @@ class RateLimitedClient:
         path = parsed.path or "/"
         if any(path == d or path.startswith(d.rstrip("/") + "/") for d in settings.robots_disallowed):
             raise DisallowedRequestError(f"path disallowed by robots.txt: {path}")
-        blocked = {k.lower() for k in parse_qs(parsed.query, keep_blank_values=True)} & settings.robots_disallowed_params
+        blocked = {
+            k.lower() for k in parse_qs(parsed.query, keep_blank_values=True)
+        } & settings.robots_disallowed_params
         if blocked:
             raise DisallowedRequestError(f"query parameter disallowed by robots.txt: {sorted(blocked)[0]}")
 
